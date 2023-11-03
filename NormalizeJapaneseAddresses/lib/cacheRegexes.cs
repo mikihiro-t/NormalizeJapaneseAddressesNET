@@ -68,7 +68,7 @@ public class CityPatterns : Dictionary<string, List<string>> { }
 
 //public class SameNamedPrefectureCityRegexPatterns : List<List<string>> { }
 
-public static class Program
+public static class CacheRegexes
 {
     private static Dictionary<string, List<(SingleTown, string)>> cachedTownRegexes = new Dictionary<string, List<(SingleTown, string)>>();  //LRUCache<string, List<(SingleTown)>> cachedTownRegexes = new LRUCache<string,  List<(SingleTown)>>(currentConfig.townCacheSize);
     private static Dictionary<string, string> cachedPrefecturePatterns;
@@ -182,12 +182,12 @@ public static class Program
 
     public static async Task<List<GaikuListItem>> GetGaikuList(string pref, string city, string town)
     {
-        if (currentConfig.interfaceVersion > 1)
+        if (Configs.CurrentConfig.interfaceVersion > 1)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {currentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
         }
 
-        string cacheKey = $"{pref}-{city}-{town}-v{currentConfig.interfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
         if (cachedGaikuListItem.ContainsKey(cacheKey))
         {
             return cachedGaikuListItem[cacheKey];
@@ -220,16 +220,16 @@ public static class Program
 
 
     //private static Dictionary<string, ResidentialList> cachedResidentials = new Dictionary<string, ResidentialList>();
-    private static Config currentConfig = new Config();
+    //private static Config currentConfig = new Config();
 
     public static async Task<ResidentialList> GetResidentials(string pref, string city, string town)
     {
-        if (currentConfig.interfaceVersion > 1)
+        if (Configs.CurrentConfig.interfaceVersion > 1)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {currentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
         }
 
-        string cacheKey = $"{pref}-{city}-{town}-v{currentConfig.interfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
         if (cachedResidentials.ContainsKey(cacheKey))
         {
             return cachedResidentials[cacheKey];
@@ -273,11 +273,11 @@ public static class Program
 
     public static async Task<AddrList> GetAddrs(string pref, string city, string town)
     {
-        if (CurrentConfig.InterfaceVersion < 2)
+        if (Configs.CurrentConfig.interfaceVersion < 2)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {CurrentConfig.InterfaceVersion}'. Please set config.interfaceVersion to 2 or higher");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 2 or higher");
         }
-        string cacheKey = $"{pref}-{city}-{town}-v{CurrentConfig.InterfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
         if (CachedAddrs.ContainsKey(cacheKey))
         {
             return CachedAddrs[cacheKey];
@@ -410,7 +410,7 @@ public static class Program
                     {
                         string num1 = Regex.Replace(value, "([一二三四五六七八九十]+)", match =>
                         (
-                           Kan2Num.Convert(match.Value[0].ToString())
+                           Utils.Kan2Num(match.Value[0].ToString())
                         ));
                         var num2 = num1.Replace("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
                         patterns3.Add(num2);  // 半角
@@ -467,7 +467,7 @@ public static class Program
             }
             string chomeNamePart = chomeMatch.Groups[1].Value;
             string chomeNum = chomeMatch.Groups[2].Value;
-            string pattern = ToRegexPattern($"^{chomeNamePart}({chomeNum}|{Kan2Num.Convert(chomeNum)})");
+            string pattern = ToRegexPattern($"^{chomeNamePart}({chomeNum}|{Utils.Kan2Num(chomeNum)})");
             patterns.Add((town, pattern));
         }
 
@@ -613,7 +613,7 @@ public class Residential
 
 //public class ResidentialList : List<Residential> { }
 
-public class Config
-{
-    public int interfaceVersion { get; set; }
-}
+//public class Config
+//{
+//    public int interfaceVersion { get; set; }
+//}

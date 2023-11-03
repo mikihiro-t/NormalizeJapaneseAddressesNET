@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace NormalizeJapaneseAddresses.lib;
 
 
-public static class patchAddr
+public static class AddressUtils
 {
     private class AddrPatch
     {
