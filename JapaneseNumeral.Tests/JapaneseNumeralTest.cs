@@ -1,11 +1,10 @@
 ﻿using Xunit;
 using JapaneseNumeral;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace JapaneseNumeral.Tests;
 
-public class UnitTest1
+public class JapaneseNumeralTest
 {
     [Theory]
     [InlineData("〇", 0)]

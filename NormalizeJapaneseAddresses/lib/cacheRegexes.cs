@@ -9,6 +9,9 @@ using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using System.IO;
 using JapaneseNumeral;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Runtime.Serialization;
 
 namespace NormalizeJapaneseAddresses.lib;
 
@@ -17,10 +20,11 @@ public class PrefectureList : Dictionary<string, List<string>> { }
 public class SingleTown
 {
     public string town { get; set; }
+    [IgnoreDataMember]
     public string originalTown { get; set; }
     public string koaza { get; set; }
-    public string lat { get; set; }
-    public string lng { get; set; }
+    public double? lat { get; set; }
+    public double? lng { get; set; }
 }
 
 
@@ -68,6 +72,16 @@ public class CityPatterns : Dictionary<string, List<string>> { }
 
 //public class SameNamedPrefectureCityRegexPatterns : List<List<string>> { }
 
+
+/// <summary>
+/// PrefectureListにJsonで変換できない場合は、これの利用を考える
+/// </summary>
+//public class Prefecture
+//{
+//    public string PrefectureName { get; set; }
+//    public IList<string> CityName { get; set; }
+//}
+
 public static class CacheRegexes
 {
     private static Dictionary<string, List<(SingleTown, string)>> cachedTownRegexes = new Dictionary<string, List<(SingleTown, string)>>();  //LRUCache<string, List<(SingleTown)>> cachedTownRegexes = new LRUCache<string,  List<(SingleTown)>>(currentConfig.townCacheSize);
@@ -86,8 +100,8 @@ public static class CacheRegexes
         {
             return cachedPrefectures;
         }
-        var prefsResp = await __internals.fetch(".json", new { level = 1 });
-        var data = await prefsResp.json();
+        var prefsResp = await __internals.fetch(".json"); //await __internals.fetch(".json", new { level = 1 });
+        var data = JsonSerializer.Deserialize<PrefectureList>(prefsResp);  //await prefsResp.json();
         cachedPrefectures = CachePrefectures(data);
         return cachedPrefectures;
     }
@@ -104,7 +118,7 @@ public static class CacheRegexes
 
     public static Dictionary<string, string> GetPrefectureRegexPatterns(List<string> prefs)
     {
-        if (cachedPrefecturePatterns.Any())
+        if (cachedPrefecturePatterns is not null && cachedPrefecturePatterns.Any())
         {
             return cachedPrefecturePatterns; //cachedPrefecturePatterns.Select(kv => new Tuple<string, string>(kv.Key, kv.Value)).ToList();
         }
@@ -135,10 +149,12 @@ public static class CacheRegexes
         cities.Sort((a, b) => b.Length - a.Length);
         Dictionary<string, string> patterns = cities.ToDictionary(city => city, city =>
         {
-            string pattern = $"^{ToRegexPattern(city)}";
+            string pattern = $"^{Dicts.ToRegexPattern(city)}";
             if (Regex.IsMatch(city, "(町|村)$"))
             {
-                pattern = $"^{ToRegexPattern(city).Replace("(.+?)郡", "($1郡)?")}";
+                //pattern = $"^{Dicts.ToRegexPattern(city).Replace("(.+?)郡", "($1郡)?")}"; // 郡が省略されてるかも
+                var temp = Regex.Replace(Dicts.ToRegexPattern(city), "(.+?)郡", "($1郡)?");
+                pattern = $"^{temp}"; // 郡が省略されてるかも
             }
             return pattern;
         });
@@ -163,19 +179,21 @@ public static class CacheRegexes
         {
             return cachedTowns[cacheKey];
         }
-        HttpClient client = new HttpClient();
-        string url = $"/{Uri.EscapeUriString(pref)}/{Uri.EscapeUriString(city)}.json";
-        HttpResponseMessage response = await client.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        TownList towns = await response.Content.ReadAsAsync<TownList>();
+
+        var townsResp = await __internals.fetch($"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}.json");
+        var towns = JsonSerializer.Deserialize<TownList>(townsResp);
+
+        //HttpResponseMessage response = await client.GetAsync(url);
+        //response.EnsureSuccessStatusCode();
+        //TownList? towns = await response.Content.ReadFromJsonAsync<TownList>();
         cachedTowns[cacheKey] = towns;
         return towns;
     }
 
-    private static string ToRegexPattern(string input)
-    {
-        return System.Text.RegularExpressions.Regex.Escape(input);
-    }
+    //private static string ToRegexPattern(string input)
+    //{
+    //    return System.Text.RegularExpressions.Regex.Escape(input);
+    //}
 
 
     //private static Dictionary<string, List<GaikuListItem>> cachedGaikuListItem = new Dictionary<string, List<GaikuListItem>>();
@@ -193,13 +211,13 @@ public static class CacheRegexes
             return cachedGaikuListItem[cacheKey];
         }
 
-        string url = $"/{encodeURI(pref)}/{encodeURI(city)}/{encodeURI(town + ".json")}";
+        string url = $"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}/{Uri.EscapeDataString(town + ".json")}";
         HttpClient client = new HttpClient();
         HttpResponseMessage gaikuResp = await client.GetAsync(url);
-        List<GaikuListItem> gaikuListItem;
+        List<GaikuListItem>? gaikuListItem;
         try
         {
-            gaikuListItem = await gaikuResp.Content.ReadAsAsync<List<GaikuListItem>>();
+            gaikuListItem = await gaikuResp.Content.ReadFromJsonAsync<List<GaikuListItem>>();
         }
         catch
         {
@@ -241,13 +259,13 @@ public static class CacheRegexes
             return cachedResidentials[cacheKey];
         }
 
-        string url = $"/{encodeURI(pref)}/{encodeURI(city)}/{encodeURI(town)}/{encodeURI("住居表示.json")}";
+        string url = $"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}/{Uri.EscapeDataString(town)}/{Uri.EscapeDataString("住居表示.json")}";
         var residentialsResp = await __internals.fetch(url);
 
         ResidentialList residentials;
         try
         {
-            residentials = await residentialsResp.json() as ResidentialList;
+            residentials = JsonSerializer.Deserialize<ResidentialList>(residentialsResp); 　　//await residentialsResp.json() as ResidentialList;
         }
         catch
         {
@@ -282,12 +300,13 @@ public static class CacheRegexes
         {
             return CachedAddrs[cacheKey];
         }
-        HttpResponseMessage cache = CachedAddrs[cacheKey];
+        var cache = CachedAddrs[cacheKey];
+        //HttpResponseMessage cache = CachedAddrs[cacheKey];
         if (cache != null)
         {
             return cache;
         }
-        string url = $"/{encodeURI(pref)}/{encodeURI(city)}/{encodeURI(town)}.json";
+        string url = $"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}/{Uri.EscapeDataString(town)}.json";
         Dictionary<string, string> parameters = new Dictionary<string, string>
         {
             { "level", "8" },
@@ -295,11 +314,12 @@ public static class CacheRegexes
             { "city", city },
             { "town", town }
         };
-        HttpResponseMessage addrsResp = await Internals.Fetch(url, parameters);
-        AddrList addrs;
+        var addrsResp = await __internals.fetch(url); //HttpResponseMessage addrsResp = await __internals.fetch(url, parameters);
+        AddrList? addrs;
         try
         {
-            addrs = await addrsResp.Content.ReadAsAsync<List<Addr>>();
+            addrs = JsonSerializer.Deserialize<AddrList>(addrsResp);
+            //addrs = await addrsResp.Content.ReadFromJsonAsync<AddrList>();
         }
         catch
         {
@@ -342,83 +362,106 @@ public static class CacheRegexes
 
         var preTowns = await GetTowns(pref, city);
         var townSet = new HashSet<string>(preTowns.Select(town => town.town));
-        var towns = new List<SingleTown>();//new List<Town>();
+        var towns = new List<SingleTown>();
+
         var isKyoto = Regex.IsMatch(city, @"^京都市");
 
+        // 町丁目に「○○町」が含まれるケースへの対応
+        // 通常は「○○町」のうち「町」の省略を許容し同義語として扱うが、まれに自治体内に「○○町」と「○○」が共存しているケースがある。
+        // この場合は町の省略は許容せず、入力された住所は書き分けられているものとして正規化を行う。
+        // 更に、「愛知県名古屋市瑞穂区十六町1丁目」漢数字を含むケースだと丁目や番地・号の正規化が不可能になる。このようなケースも除外。
         foreach (var town in preTowns)
         {
             towns.Add(town);
             var originalTown = town.town;
             if (originalTown.IndexOf("町") == -1) continue;
             var townAbbr = Regex.Replace(originalTown, @"(?!^町)町", "");
-            if (!isKyoto &&
+            if (!isKyoto && // 京都は通り名削除の処理があるため、意図しないマッチになるケースがある。これを除く
                 !townSet.Contains(townAbbr) &&
-                !townSet.Contains($"大字{townAbbr}") &&
+                !townSet.Contains($"大字{townAbbr}") && // 大字は省略されるため、大字〇〇と〇〇町がコンフリクトする。このケースを除外
                 !IsKanjiNumberFollowedByCho(originalTown))
             {
                 // エイリアスとして町なしのパターンを登録
                 //TODO オリジナルのTSのコードの結果と一致するか確認せよ
                 towns.Add(new SingleTown
-                {
+                {//例：東京都江戸川区西小松川12-345　→　originalTown 西小松川町, town 西小松川
+                    koaza = town.koaza,
+                    lat = town.lat,
+                    lng = town.lng,
                     originalTown = originalTown,
                     town = townAbbr
                 });
             }
         }
-
-
-
-
-        towns.Sort((a, b) =>
-          {
-              var aLen = a.town.Length;
-              var bLen = b.town.Length;
-              if (a.town.StartsWith("大字")) aLen -= 2;
-              if (b.town.StartsWith("大字")) bLen -= 2;
-              return bLen - aLen;
-          });
+        //ListにSortをしても安定ソートにならない。
+        //オリジナルのTypeScriptのコードでは、townsをSort(a,b)しても、同じtown.lengthなら元の順序が保持されるようだ（安定ソート）
+        //そのため、OrderByを利用する。https://stackoverflow.com/a/12402519/9924249
+        ComparerA comparer = new();
+        towns = towns.OrderBy(x => x, comparer).ToList();
+        // 少ない文字数の地名に対してミスマッチしないように文字の長さ順にソート
+        //towns.Sort((a, b) =>
+        //  {
+        //      var aLen = a.town.Length;
+        //      var bLen = b.town.Length;
+        //      // 大字で始まる場合、優先度を低く設定する。
+        //      // 大字XX と XXYY が存在するケースもあるので、 XXYY を先にマッチしたい
+        //      if (a.town.StartsWith("大字")) aLen -= 2;
+        //      if (b.town.StartsWith("大字")) bLen -= 2;
+        //      return bLen - aLen;
+        //  });
 
         //https://stackoverflow.com/questions/31326451/replacing-regex-matches-using-lambda-expression
 
         List<(SingleTown, string)> patterns = new();
         foreach (var town in towns)
         {
+            // 横棒を含む場合（流通センター、など）に対応
             var output1 = Regex.Replace(town.town, "[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]");
             var output2 = Regex.Replace(output1, "大?字", "(大?字)?");
             //var output3 = Regex.Replace(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", match => (match.Value[0]).ToString());
-            MatchCollection results = Regex.Matches(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)");
-            if (results is null || results.Count == 0)
-            {
-                patterns.Add((town, output2));
-            }
-            else
-            {
-                foreach (Match m in results.Cast<Match>())
-                {
-                    int index = m.Index; // 発見した文字列の開始位置
-                    string value = m.Value; // 発見した文字列
-                    var patterns3 = new List<string>();
-                    patterns3.Add(m.Value.ToString().Replace("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
-                    // 漢数字
-                    if (Regex.IsMatch(value, "^壱"))
-                    {
-                        patterns3.Add("一");
-                        patterns3.Add("1");
-                        patterns3.Add("１");
-                    }
-                    else
-                    {
-                        string num1 = Regex.Replace(value, "([一二三四五六七八九十]+)", match =>
-                        (
-                           Utils.Kan2Num(match.Value[0].ToString())
-                        ));
-                        var num2 = num1.Replace("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
-                        patterns3.Add(num2);  // 半角
-                    }
-                    string _pattern = $"({string.Join("|", patterns3)})((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])";
-                    patterns.Add((town, _pattern));
-                }
-            }
+            // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
+            var output4 = Regex.Replace(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", matchEvaluator);
+
+            //MatchCollection results = Regex.Matches(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)");
+            //var sb = new StringBuilder();
+            //if (results is null || results.Count == 0)
+            //{
+            //    patterns.Add((town, dict.ToRegexPattern(output2)));
+            //}
+            //else
+            //{
+            //    foreach (Match m in results.Cast<Match>())
+            //    {
+            //        int index = m.Index; // 発見した文字列の開始位置
+            //        string value = m.Value; // 発見した文字列
+            //        var patterns3 = new List<string>();
+            //        patterns3.Add(Regex.Replace(value, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
+            //        //patterns3.Add(m.Value.ToString().Replace("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
+            //        // 漢数字
+            //        if (Regex.IsMatch(value, "^壱"))
+            //        {
+            //            patterns3.Add("一");
+            //            patterns3.Add("1");
+            //            patterns3.Add("１");
+            //        }
+            //        else
+            //        {
+            //            string num1 = Regex.Replace(value, "([一二三四五六七八九十]+)", match =>
+            //            (
+            //               Utils.Kan2Num(match.Value[0].ToString())
+            //            ));
+            //            var num2 =  Regex.Replace(num1,"(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
+            //            patterns3.Add(num2); // 半角アラビア数字
+            //        }
+            //        string _pattern = $"({string.Join("|", patterns3)})((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])";
+            //        sb.Append(_pattern) ;
+            //    }
+            //    patterns.Add((town, dict.ToRegexPattern(sb.ToString())));  //'^自由[ヶケが]丘(一|1)' のように配置する
+            //}
+
+
+
+            patterns.Add((town, Dicts.ToRegexPattern(output4)));
         };
 
         //    List<(SingleTown, string)> patterns = towns.Select(town =>
@@ -467,7 +510,7 @@ public static class CacheRegexes
             }
             string chomeNamePart = chomeMatch.Groups[1].Value;
             string chomeNum = chomeMatch.Groups[2].Value;
-            string pattern = ToRegexPattern($"^{chomeNamePart}({chomeNum}|{Utils.Kan2Num(chomeNum)})");
+            string pattern = Dicts.ToRegexPattern($"^{chomeNamePart}({chomeNum}|{Utils.Kan2Num(chomeNum)})");
             patterns.Add((town, pattern));
         }
 
@@ -486,30 +529,32 @@ public static class CacheRegexes
         return patterns;
     }
 
-    //private static async Task<List<SingleTown>> GetTowns(string pref, string city)
-    //{
-    //    // Implement the logic to get towns based on pref and city
-    //    throw new NotImplementedException();
-    //}
 
-    //private static bool IsKanjiNumberFollowedByCho(string town)
-    //{
-    //    // Implement the logic to check if the town is a kanji number followed by "町"
-    //    throw new NotImplementedException();
-    //}
-
-    //private class Town
-    //{
-    //    public string originalTown { get; set; }
-    //    public string town { get; set; }
-    //}
-
-
-
-
-
-
-
+    public static string matchEvaluator(Match m)
+    {
+        //int index = m.Index; // 発見した文字列の開始位置
+        string value = m.Value; // 発見した文字列
+        var patterns3 = new List<string>();
+        patterns3.Add(Regex.Replace(value, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
+        // 漢数字
+        if (Regex.IsMatch(value, "^壱"))
+        {
+            patterns3.Add("一");
+            patterns3.Add("1");
+            patterns3.Add("１");
+        }
+        else
+        {
+            string num1 = Regex.Replace(value, "([一二三四五六七八九十]+)", match =>
+            (
+               Utils.Kan2Num(match.Value.ToString())
+            ));
+            var num2 = Regex.Replace(num1, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
+            patterns3.Add(num2); // 半角アラビア数字
+        }
+        string _pattern = $"({string.Join("|", patterns3)})((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])";
+        return _pattern;
+    }
 
 
 
@@ -565,7 +610,7 @@ public static class CacheRegexes
 
     public static Dictionary<string, string> GetSameNamedPrefectureCityRegexPatterns(List<string> prefs, Dictionary<string, List<string>> prefList)
     {
-        if (cachedSameNamedPrefectureCityRegexPatterns != null)
+        if (cachedSameNamedPrefectureCityRegexPatterns is not null && cachedSameNamedPrefectureCityRegexPatterns.Any())
         {
             return cachedSameNamedPrefectureCityRegexPatterns;
         }
@@ -617,3 +662,20 @@ public class Residential
 //{
 //    public int interfaceVersion { get; set; }
 //}
+
+public class ComparerA : IComparer<SingleTown>
+{
+    public int Compare(SingleTown a, SingleTown b)
+    {
+        var aLen = a.town.Length;
+        var bLen = b.town.Length;
+        if (a.town.StartsWith("大字")) aLen -= 2;
+        if (b.town.StartsWith("大字")) bLen -= 2;
+        if (bLen > aLen)　//town名が長いのを優先
+            return 1;
+        else if (aLen == bLen)
+            return 0;
+        else
+            return -1;
+    }
+}

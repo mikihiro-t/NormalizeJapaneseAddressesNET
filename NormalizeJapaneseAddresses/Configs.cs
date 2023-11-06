@@ -11,9 +11,8 @@ public static class Configs
     public readonly static string gh_pages_endpoint = "https://geolonia.github.io/japanese-addresses/api/ja";
     public static Config CurrentConfig { get; set; } = new()
     {
-        interfaceVersion = 1,
+        interfaceVersion = 2,
         japaneseAddressesApi = gh_pages_endpoint,
         townCacheSize = 1000,
     };
-
 }

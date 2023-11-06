@@ -1,13 +1,10 @@
-﻿using NormalizeJapaneseAddresses;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using NormalizeJapaneseAddresses.lib;
-using System.Reflection.Metadata.Ecma335;
 
 namespace NormalizeJapaneseAddresses;
 
@@ -26,9 +23,9 @@ public class TransformRequestQuery
 
 public delegate TransformRequestResponse TransformRequestFunction(Uri url, TransformRequestQuery query);
 
-/**
- * normalize {@link Normalizer} の動作オプション。
- */
+/// <summary>
+/// normalize {@link Normalizer} の動作オプション。
+/// </summary>
 public class Config
 {  /**
    * レスポンス型のバージョン。デフォルト 1
@@ -164,59 +161,55 @@ public delegate Task<INormalizeResult> Normalizer(string input, Option option = 
 
 public delegate Task<Response> FetchLike(string input, TransformRequestQuery requestQuery = null);
 
-//public class NormalizeResult
-//{
-//    // Define properties of NormalizeResult class here
-//}
+
+public static class defaultOption
+{
+    public static int level = 3;
+}
 
 public class Response
 {
     // Define properties of Response class here
 }
 
-//public class TransformRequestQuery
-//{
-//    // Define properties of TransformRequestQuery class here
-//}
-
-//public class Config
-//{
-//    public static string japaneseAddressesApi = "https://example.com/api/";
-//    public static string geoloniaApiKey = "your-api-key";
-//}
-/**
- * @internal
- */
-public class __internals
+/// <summary>
+/// @internal
+/// </summary>
+internal static class __internals
 {
-    public static FetchLike fetch = async (string input, TransformRequestQuery requestQuery = null) =>
+    public static async Task<string> fetch(string input)
     {
-        string url = new Uri(new Uri(NormalizeClass.config.japaneseAddressesApi), input).ToString();
+        string url = new Uri(NormalizeClass.config.japaneseAddressesApi + input).ToString();
         if (!string.IsNullOrEmpty(NormalizeClass.config.geoloniaApiKey))
         {
             url += $"?geolonia-api-key={NormalizeClass.config.geoloniaApiKey}";
         }
+        //  return unfetch(url) に対応したC#のコード
         using (HttpClient client = new HttpClient())
         {
             HttpResponseMessage response = await client.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
-                return new Response { json = async () => await response.Content.ReadAsAsync<object>() };
+                return await response.Content.ReadAsStringAsync();
+                //return new Response { await response.Content.ReadAsAsync<object>() };
+                //return new Response { json = async () => await response.Content.ReadAsAsync<object>() };
             }
             else
             {
                 throw new Exception($"Request failed with status code {response.StatusCode}");
             }
         }
-    };
+    }
 }
 
-public class Program
-{
 
-    public async Task<NormalizeResultString> normalizeTownName(string addr, string pref, string city)
+public static class Program
+{
+    public static async Task<NormalizeResultString> NormalizeTownName(string addr, string pref, string city)
     {
-        addr = addr.Trim().Replace("^大字", "");
+        addr = addr.Trim();
+        addr = Regex.Replace(addr, "^大字", "");
+
         List<(SingleTown, string)> townPatterns = await CacheRegexes.GetTownRegexPatterns(pref, city);
         List<string> regexPrefixes = new List<string> { "^" };
         if (city.StartsWith("京都市"))
@@ -238,8 +231,8 @@ public class Program
                     {
                         town = town.originalTown ?? town.town,
                         addr = addr.Substring(match.Length),
-                        lat = town.lat,
-                        lng = town.lng
+                        lat = town.lat.ToString(),
+                        lng = town.lng.ToString()
                     };
                 }
             }
@@ -250,7 +243,7 @@ public class Program
 
 
 
-    public static async Task<Dictionary<string, string>> NormalizeResidentialPart(string addr, string pref, string city, string town)
+    public static async Task<NormalizeResult_v1> NormalizeResidentialPart(string addr, string pref, string city, string town)
     {
         var result = new Dictionary<string, string>();
         var gaikuListItem = await GetGaikuList(pref, city, town);
@@ -262,7 +255,7 @@ public class Program
             return null;
         }
 
-        var match = System.Text.RegularExpressions.Regex.Match(addr, @"^([1-9][0-9]*)-([1-9][0-9]*)");
+        var match = Regex.Match(addr, @"^([1-9][0-9]*)-([1-9][0-9]*)");
         if (match.Success)
         {
             var gaiku = match.Groups[1].Value;
@@ -270,26 +263,26 @@ public class Program
             var jyukyohyoji = $"{gaiku}-{jyukyo}";
             var residential = residentials.Find(res => $"{res["gaiku"]}-{res["jyukyo"]}" == jyukyohyoji);
 
-            if (residential != null)
+            if (residential is not null)
             {
                 var addr2 = addr.Replace(jyukyohyoji, "").Trim();
-                result.Add("gaiku", gaiku);
-                result.Add("jyukyo", jyukyo);
-                result.Add("addr", addr2);
-                result.Add("lat", residential["lat"]);
-                result.Add("lng", residential["lng"]);
-                return result;
+                //result.Add("gaiku", gaiku);
+                //result.Add("jyukyo", jyukyo);
+                //result.Add("addr", addr2);
+                //result.Add("lat", residential["lat"]);
+                //result.Add("lng", residential["lng"]);
+                return new NormalizeResult_v1() { gaiku = gaiku, jyukyo = jyukyo, addr = addr2, lat = double.Parse(residential["lat"]), lng = double.Parse(residential["lng"]) }; //本家と異なり、lat,lngは、stringではなく、doubleに変換してから返す。
             }
 
             var gaikuItem = gaikuListItem.Find(item => item["gaiku"] == gaiku);
-            if (gaikuItem != null)
+            if (gaikuItem is not null)
             {
                 var addr2 = addr.Replace(gaikuItem["gaiku"], "").Trim();
-                result.Add("gaiku", gaiku);
-                result.Add("addr", addr2);
-                result.Add("lat", gaikuItem["lat"]);
-                result.Add("lng", gaikuItem["lng"]);
-                return result;
+                //result.Add("gaiku", gaiku);
+                //result.Add("addr", addr2);
+                //result.Add("lat", gaikuItem["lat"]);
+                //result.Add("lng", gaikuItem["lng"]);
+                return new NormalizeResult_v1() { gaiku = gaiku, addr = addr2, lat = double.Parse(residential["lat"]), lng = double.Parse(residential["lng"]) };//本家と異なり、lat,lng
             }
         }
 
@@ -333,26 +326,14 @@ public class Program
         return null;
     }
 
-    //public static async Task<List<SingleAddr>> GetAddrs(string pref, string city, string town)
-    //{
-    //    // Implementation of getAddrs method goes here
-    //    throw new NotImplementedException();
-    //}
 
-    //public static async Task Main(string[] args)
-    //{
-    //    // Usage example
-    //    Address result = await NormalizeAddrPart("address", "pref", "city", "town");
-    //    Console.WriteLine(result);
-    //}
-
-
-
-
-    public async Task<INormalizeResult> Normalize(string address, NormalizerOption option = null)
+    public static async Task<INormalizeResult> Normalize(string address, NormalizerOption? option = null)
     {
-        var defaultOption = new NormalizerOption();
-        option ??= defaultOption;
+        if (option is null)
+        {
+            option = new NormalizerOption();
+            option.Level = defaultOption.level;
+        }
 
         if (!string.IsNullOrEmpty(option.GeoloniaApiKey) || !string.IsNullOrEmpty(NormalizeClass.config.geoloniaApiKey))
         {
@@ -370,17 +351,17 @@ public class Program
 
         var addr = address
             .Normalize(NormalizationForm.FormC)
-            .Replace("　", " ") //全角の空白を半角の空白へ
-            .Replace(" +", " ");
+            .Replace("　", " "); //全角の空白を半角の空白へ
+        addr = Regex.Replace(addr, " +", " ");
         addr = Regex.Replace(addr, "([０-９Ａ-Ｚａ-ｚ]+)", (match) =>
-      {
-          // 全角のアラビア数字は問答無用で半角にする
-          return Utils.Zen2Han(match.Value);
-      });
+        {
+            // 全角のアラビア数字は問答無用で半角にする
+            return Utils.Zen2Han(match.Value);
+        });
         // 数字の後または数字の前にくる横棒はハイフンに統一する
         addr = Regex.Replace(addr, "([0-9０-９一二三四五六七八九〇十百千][-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])|([-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])[0-9０-９一二三四五六七八九〇十]", (match) =>
         {
-            return match.Value.Replace("[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
+            return Regex.Replace(match.Value, "[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
         });
         addr = Regex.Replace(addr, "(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)", (match) =>
        {
@@ -418,13 +399,6 @@ public class Program
 
 
 
-
-
-
-
-
-
-        //public delegate Task<NormalizedAddress> Normalizer(string address, NormalizerOption option = null);
 
         // 県名が省略されており、かつ市の名前がどこかの都道府県名と同じ場合(例.千葉県千葉市)、
         // あらかじめ県名を補完しておく。
@@ -487,7 +461,7 @@ public class Program
             {
                 for (int i = 0; i < matched.Count; i++)
                 {
-                    var normalized2 = await normalizeTownName(matched[i].addr, matched[i].pref, matched[i].city);
+                    var normalized2 = await NormalizeTownName(matched[i].addr, matched[i].pref, matched[i].city);
                     if (normalized2 != null)
                     {
                         pref = matched[i].pref;
@@ -516,13 +490,13 @@ public class Program
         }
         if (!string.IsNullOrEmpty(city) && option.Level >= 3)
         {
-            normalized = await normalizeTownName(addr, pref, city);
-            if (normalized != null)
+            normalized = await NormalizeTownName(addr, pref, city);
+            if (normalized is not null)
             {
                 town = normalized.town;
                 addr = normalized.addr;
-                lat = double.Parse(normalized.lat); //TODO TryParseにするか検討せよ //　float.Parse(normalized.lat); //normalized.latはstring 
-                lng = double.Parse(normalized.lng);//  float.Parse(normalized.lng); //normalized.lngはstring
+                lat = string.IsNullOrEmpty(normalized.lat) ? null : double.Parse(normalized.lat); //lat, lngとも、オリジナルのデータでnullがある //TODO TryParseにするか検討せよ //　float.Parse(normalized.lat); //normalized.latはstring 
+                lng = string.IsNullOrEmpty(normalized.lng) ? null : double.Parse(normalized.lng);//  float.Parse(normalized.lng); //normalized.lngはstring
                 if ((lat is double and not double.NaN) && (lng is double and not double.NaN))  //float.IsNaN(lat) || float.IsNaN(lng)  //https://stackoverflow.com/a/69558942/9924249
                 {
                     //latはlngは、nullでもなければ非数でもない
@@ -533,78 +507,71 @@ public class Program
                     lng = null;
                 }
             }
+
+            // townが取得できた場合にのみ、addrに対する各種の変換処理を行う。
             if (!string.IsNullOrEmpty(town))
             {
+                addr = Regex.Replace(addr, @"^-", "");
+
+                addr = Regex.Replace(addr, @"([0-9]+)(丁目)",
+                  (match) =>
+                    {
+                        var m = Regex.Replace(match.Value, @"([0-9]+)",
+                            (num) =>
+                            {
+                                return JapaneseNumeral.JapaneseNumeral.Number2kanji(long.Parse(num.Value));
+                            });
+                        return m;
+                    });
+
+                addr = Regex.Replace(addr, @"(([0-9]+|[〇一二三四五六七八九十百千]+)(番地?)([0-9]+|[〇一二三四五六七八九十百千]+)号)\s*(.+)", "$1 $5");
+
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)\s*(番地?)\s*([0-9]+|[〇一二三四五六七八九十百千]+)\s*号?", "$1-$3");
+
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)番地?", "$1");
+
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)の", "$1-");
+
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", (match) =>
+                      {
+                          var m = Utils.Kan2Num(match.Value);
+                          m = Regex.Replace(m, @"[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
+                          return m;
+                      });
 
 
-
-
-
-                addr = addr
-                   .Replace("-", "")
-                   .Replace("丁目", "")
-                   .Replace("番地", "")
-                   .Replace("号", "")
-                   .Replace("の", "-")
-                   .Replace("−", "-")
-                   .Replace("﹣", "-")
-                   .Replace("−", "-")
-                   .Replace("‐", "-")
-                   .Replace("⁃", "-")
-                   .Replace("‑", "-")
-                   .Replace("‒", "-")
-                   .Replace("–", "-")
-                   .Replace("—", "-")
-                   .Replace("﹘", "-")
-                   .Replace("―", "-")
-                   .Replace("⎯", "-")
-                   .Replace("⏤", "-")
-                   .Replace("ー", "-")
-                   .Replace("ｰ", "-")
-                   .Replace("─", "-")
-                   .Replace("━", "-");
-
-                addr = Regex.Replace(addr, @"([0-9〇一二三四五六七八九十百千]+)", (match) =>
-            {
-                return JapaneseNumeral.JapaneseNumeral.Number2kanji(int.Parse(match.Value));
-            });
-
-                addr = Regex.Replace(addr, @"([0-9〇一二三四五六七八九十百千]+)-([0-9〇一二三四五六七八九十百千]+)", (match) =>
+                addr = Regex.Replace(addr, @"[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]([0-9]+|[〇一二三四五六七八九十百千]+)", (match) =>
                 {
-                    return Utils.Kan2Num(match.Value);
+                    var m = Utils.Kan2Num(match.Value);
+                    m = Regex.Replace(m, @"[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
+                    return m;
                 });
 
-                addr = Regex.Replace(addr, @"([0-9〇一二三四五六七八九十百千]+)-", (match) =>
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)-", (match) =>
                 {
                     // `1-` のようなケース
                     return Utils.Kan2Num(match.Value);
                 });
 
-                addr = Regex.Replace(addr, @"-([0-9〇一二三四五六七八九十百千]+)", (match) =>
+                addr = Regex.Replace(addr, @"-([0-9]+|[〇一二三四五六七八九十百千]+)", (match) =>
                 {
                     // `-1` のようなケース
                     return Utils.Kan2Num(match.Value);
                 });
 
-                addr = Regex.Replace(addr, @"-[^0-9]([0-9〇一二三四五六七八九十百千]+)", (match) =>
+                addr = Regex.Replace(addr, @"-[^0-9]([0-9]+|[〇一二三四五六七八九十百千]+)", (match) =>
                 {
                     // `-あ1` のようなケース
                     return Utils.Kan2Num(Utils.Zen2Han(match.Value));
                 });
 
-                addr = Regex.Replace(addr, @"([0-9〇一二三四五六七八九十百千]+)$", (match) =>
+                addr = Regex.Replace(addr, @"([0-9]+|[〇一二三四五六七八九十百千]+)$", (match) =>
                 {
                     // `串本町串本１２３４` のようなケース
                     return Utils.Kan2Num(match.Value);
                 });
 
                 addr = addr.Trim();
-
-
-
-
-
-
             }
         }
         addr = AddressUtils.PatchAddr(pref, city, town, addr);
@@ -663,52 +630,61 @@ public class Program
         }
         else if (Configs.CurrentConfig.interfaceVersion == 1)
         {
-            //TODO ここ 変換する
+            var normalizeResult_v1 = new NormalizeResult_v1();
 
-            return null;
+            if (option.Level > 3 && normalized is not null && town is not null)
+            {
+                normalizeResult_v1 = await NormalizeResidentialPart(addr, pref, city, town);
+            }
+
+            //if (normalized is not null)
+            //{
+            //    lat = double.Parse(normalized.lat);
+            //    lng = double.Parse(normalized.lng);
+            //}
+            if ((lat is double and not double.NaN) && (lng is double and not double.NaN))
+            {
+                //latはlngは、nullでもなければ非数でもない
+            }
+            else
+            {
+                lat = null;
+                lng = null;
+            }
+
+
+            NormalizeResult_v1 result = new NormalizeResult_v1
+            {
+                pref = pref,
+                city = city,
+                town = town,
+                addr = addr,
+                lat = lat,
+                lng = lng,
+                level = level
+            };
+
+            //if (normalized is not null && normalized.ContainsKey("gaiku"))
+            //{
+            //    result.addr = normalized.addr;
+            //    result.gaiku = normalized.gaiku;
+            //    result.level = 7;
+            //}
+
+            //if (normalized is not null && normalized.ContainsKey("jyukyo"))
+            //{
+            //    result.jyukyo = normalized.jyukyo;
+            //    result.level = 8;
+            //}
+
+            return result;
+
         }
         else
         {
             throw new Exception("invalid interfaceVersion");
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
-
-    //private string Zen2Han(string input)
-    //{
-    //    // Implement Zen2Han conversion logic here
-    //}
-
-    //private async Task<Dictionary<string, string>> GetPrefectures()
-    //{
-    //    // Implement GetPrefectures logic here
-    //}
-
-    //private Dictionary<string, Regex> GetPrefectureRegexPatterns(IEnumerable<string> prefs)
-    //{
-    //    // Implement GetPrefectureRegexPatterns logic here
-    //}
-
-    //private Dictionary<string, Regex> GetSameNamedPrefectureCityRegexPatterns(IEnumerable<string> prefs, Dictionary<string, string> prefectures)
-    //{
-    //    // Implement GetSameNamedPrefectureCityRegexPatterns logic here
-    //}
 }
 
 
@@ -723,16 +699,5 @@ public class NormalizerOption
 {
     public string GeoloniaApiKey { get; set; }
     public int Level { get; set; }
-}
-
-//public class Config
-//{
-//    public static string GeoloniaApiKey { get; set; }
-//    public static string JapaneseAddressesApi { get; set; }
-//}
-
-public class NormalizedAddress
-{
-    // Define properties for normalized address here
 }
 
