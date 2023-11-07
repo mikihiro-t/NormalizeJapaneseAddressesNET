@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <RootNamespace>NormalizeJapaneseAddresses</RootNamespace>
+    <RootNamespace>NormalizeJapaneseAddressesNET</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JapaneseNumeral\JapaneseNumeral.csproj" />
+    <ProjectReference Include="..\JapaneseNumeral\JapaneseNumeralNET.csproj" />
   </ItemGroup>
 
 </Project>

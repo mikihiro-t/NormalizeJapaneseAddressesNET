@@ -1,4 +1,4 @@
-﻿namespace JapaneseNumeral;
+﻿namespace JapaneseNumeralNET;
 
 public static class Utils
 {

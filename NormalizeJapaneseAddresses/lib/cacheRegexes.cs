@@ -1,39 +1,38 @@
-﻿using NormalizeJapaneseAddresses.lib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections;
-using System.Reflection.Emit;
-using System.Text.RegularExpressions;
-using System.IO;
-using JapaneseNumeral;
+﻿using System.IO;
+using JapaneseNumeralNET;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Runtime.Serialization;
 
-namespace NormalizeJapaneseAddresses.lib;
+namespace NormalizeJapaneseAddressesNET.Lib;
 
 public class PrefectureList : Dictionary<string, List<string>> { }
 
+/// <summary>
+/// 
+/// </summary>
+/// <remarks>Jsonをデシリアライズするため、Jsonのデータと同じようにプロパティ名は小文字から始める。</remarks>
 public class SingleTown
 {
-    public string town { get; set; }
+    public string? town { get; set; }
     [IgnoreDataMember]
-    public string originalTown { get; set; }
-    public string koaza { get; set; }
+    public string? originalTown { get; set; }
+    public string? koaza { get; set; }
     public double? lat { get; set; }
     public double? lng { get; set; }
 }
 
+public class TownList : List<SingleTown> { }
 
 public class SingleAddr
 {
-    public string addr { get; set; }
-    public string lat { get; set; }
-    public string lng { get; set; }
+    public string? addr { get; set; }
+    public string? lat { get; set; }
+    public string? lng { get; set; }
 }
+
+public class AddrList : List<SingleAddr> { }
+
 public class GaikuListItem
 {
     public string gaiku { get; set; }
@@ -49,6 +48,7 @@ public class SingleResidential
     public string lng { get; set; }
 }
 
+public class ResidentialList : List<SingleResidential> { }
 
 public class LRUCache<TKey, TValue> : Dictionary<TKey, TValue>
 {
@@ -60,17 +60,6 @@ public class LRUCache<TKey, TValue> : Dictionary<TKey, TValue>
     }
 }
 
-//public class GaikuListItem { }
-
-public class TownList : List<SingleTown> { }
-
-public class ResidentialList : List<SingleResidential> { } //List<SingleTown> { }
-
-public class AddrList : List<SingleAddr> { }
-
-public class CityPatterns : Dictionary<string, List<string>> { }
-
-//public class SameNamedPrefectureCityRegexPatterns : List<List<string>> { }
 
 
 /// <summary>
@@ -96,11 +85,11 @@ public static class CacheRegexes
 
     public static async Task<PrefectureList> GetPrefectures()
     {
-        if (cachedPrefectures != null)
+        if (cachedPrefectures is not null)
         {
             return cachedPrefectures;
         }
-        var prefsResp = await __internals.fetch(".json"); //await __internals.fetch(".json", new { level = 1 });
+        var prefsResp = await Internals.Fetch(".json"); //await __internals.fetch(".json", new { level = 1 });
         var data = JsonSerializer.Deserialize<PrefectureList>(prefsResp);  //await prefsResp.json();
         cachedPrefectures = CachePrefectures(data);
         return cachedPrefectures;
@@ -112,10 +101,6 @@ public static class CacheRegexes
         return cachedPrefectures;
     }
 
-    //private static Dictionary<string, string> cachedPrefecturePatterns = new Dictionary<string, string>();
-    //private static Dictionary<string, Dictionary<string, string>> cachedCityPatterns = new Dictionary<string, Dictionary<string, string>>();
-    //private static Dictionary<string, Dictionary<string, TownList>> cachedTowns = new Dictionary<string, Dictionary<string, TownList>>();
-
     public static Dictionary<string, string> GetPrefectureRegexPatterns(List<string> prefs)
     {
         if (cachedPrefecturePatterns is not null && cachedPrefecturePatterns.Any())
@@ -126,7 +111,9 @@ public static class CacheRegexes
             pref => pref,
             pref =>
             {
-                var _pref = Regex.Replace(pref, "(都|道|府|県)$", "");
+                var r = new Regex("(都|道|府|県)$");
+                var _pref = r.Replace(pref, "", 1);
+                //var _pref = Regex.Replace(pref, "(都|道|府|県)$", "");
                 return $"^{_pref}(都|道|府|県)?";
             }
             );
@@ -142,18 +129,19 @@ public static class CacheRegexes
     public static Dictionary<string, string> GetCityRegexPatterns(string pref, List<string> cities)
     {
         if (cachedCityPatterns.ContainsKey(pref)) return cachedCityPatterns[pref];
-        //if (cachedCityPatterns.ContainsKey(pref))
-        //{
-        //    return cachedCityPatterns[pref];
-        //}
+
+        // 少ない文字数の地名に対してミスマッチしないように文字の長さ順にソート
         cities.Sort((a, b) => b.Length - a.Length);
+
         Dictionary<string, string> patterns = cities.ToDictionary(city => city, city =>
         {
             string pattern = $"^{Dicts.ToRegexPattern(city)}";
             if (Regex.IsMatch(city, "(町|村)$"))
             {
                 //pattern = $"^{Dicts.ToRegexPattern(city).Replace("(.+?)郡", "($1郡)?")}"; // 郡が省略されてるかも
-                var temp = Regex.Replace(Dicts.ToRegexPattern(city), "(.+?)郡", "($1郡)?");
+                var r = new Regex("(.+?)郡");
+                var temp = r.Replace(Dicts.ToRegexPattern(city), "($1郡)?", 1);
+                //var temp = Regex.Replace(Dicts.ToRegexPattern(city), "(.+?)郡", "($1郡)?");
                 pattern = $"^{temp}"; // 郡が省略されてるかも
             }
             return pattern;
@@ -172,7 +160,7 @@ public static class CacheRegexes
         return patterns;
     }
 
-    public static async Task<TownList> GetTowns(string pref, string city)
+    public static async Task<TownList?> GetTowns(string pref, string city)
     {
         string cacheKey = $"{pref}-{city}";
         if (cachedTowns.ContainsKey(cacheKey))
@@ -180,32 +168,20 @@ public static class CacheRegexes
             return cachedTowns[cacheKey];
         }
 
-        var townsResp = await __internals.fetch($"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}.json");
+        var townsResp = await Internals.Fetch($"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}.json");
         var towns = JsonSerializer.Deserialize<TownList>(townsResp);
-
-        //HttpResponseMessage response = await client.GetAsync(url);
-        //response.EnsureSuccessStatusCode();
-        //TownList? towns = await response.Content.ReadFromJsonAsync<TownList>();
         cachedTowns[cacheKey] = towns;
         return towns;
     }
 
-    //private static string ToRegexPattern(string input)
-    //{
-    //    return System.Text.RegularExpressions.Regex.Escape(input);
-    //}
-
-
-    //private static Dictionary<string, List<GaikuListItem>> cachedGaikuListItem = new Dictionary<string, List<GaikuListItem>>();
-
     public static async Task<List<GaikuListItem>> GetGaikuList(string pref, string city, string town)
     {
-        if (Configs.CurrentConfig.interfaceVersion > 1)
+        if (Configs.CurrentConfig.InterfaceVersion > 1)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.InterfaceVersion}'. Please set config.interfaceVersion to 1.");
         }
 
-        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.InterfaceVersion}";
         if (cachedGaikuListItem.ContainsKey(cacheKey))
         {
             return cachedGaikuListItem[cacheKey];
@@ -237,17 +213,15 @@ public static class CacheRegexes
 
 
 
-    //private static Dictionary<string, ResidentialList> cachedResidentials = new Dictionary<string, ResidentialList>();
-    //private static Config currentConfig = new Config();
 
     public static async Task<ResidentialList> GetResidentials(string pref, string city, string town)
     {
-        if (Configs.CurrentConfig.interfaceVersion > 1)
+        if (Configs.CurrentConfig.InterfaceVersion > 1)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 1.");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.InterfaceVersion}'. Please set config.interfaceVersion to 1.");
         }
 
-        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.InterfaceVersion}";
         if (cachedResidentials.ContainsKey(cacheKey))
         {
             return cachedResidentials[cacheKey];
@@ -260,7 +234,7 @@ public static class CacheRegexes
         }
 
         string url = $"/{Uri.EscapeDataString(pref)}/{Uri.EscapeDataString(city)}/{Uri.EscapeDataString(town)}/{Uri.EscapeDataString("住居表示.json")}";
-        var residentialsResp = await __internals.fetch(url);
+        var residentialsResp = await Internals.Fetch(url);
 
         ResidentialList residentials;
         try
@@ -291,18 +265,18 @@ public static class CacheRegexes
 
     public static async Task<AddrList> GetAddrs(string pref, string city, string town)
     {
-        if (Configs.CurrentConfig.interfaceVersion < 2)
+        if (Configs.CurrentConfig.InterfaceVersion < 2)
         {
-            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.interfaceVersion}'. Please set config.interfaceVersion to 2 or higher");
+            throw new Exception($"Invalid config.interfaceVersion: {Configs.CurrentConfig.InterfaceVersion}'. Please set config.interfaceVersion to 2 or higher");
         }
-        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.interfaceVersion}";
+        string cacheKey = $"{pref}-{city}-{town}-v{Configs.CurrentConfig.InterfaceVersion}";
         if (CachedAddrs.ContainsKey(cacheKey))
         {
             return CachedAddrs[cacheKey];
         }
         var cache = CachedAddrs[cacheKey];
         //HttpResponseMessage cache = CachedAddrs[cacheKey];
-        if (cache != null)
+        if (cache is not null)
         {
             return cache;
         }
@@ -314,7 +288,7 @@ public static class CacheRegexes
             { "city", city },
             { "town", town }
         };
-        var addrsResp = await __internals.fetch(url); //HttpResponseMessage addrsResp = await __internals.fetch(url, parameters);
+        var addrsResp = await Internals.Fetch(url); //HttpResponseMessage addrsResp = await __internals.fetch(url, parameters);
         AddrList? addrs;
         try
         {
@@ -330,28 +304,24 @@ public static class CacheRegexes
         return addrs;
     }
 
+    /// <summary>
+    /// 十六町 のように漢数字と町が連結しているか
+    /// </summary>
+    /// <param name="targetTownName"></param>
+    /// <returns></returns>
     public static bool IsKanjiNumberFollowedByCho(string targetTownName)
     {
-        var xCho = System.Text.RegularExpressions.Regex.Matches(targetTownName, ".町");
+        var xCho = Regex.Matches(targetTownName, ".町");
         if (xCho.Count == 0)
         {
             return false;
         }
-        var kanjiNumbers = JapaneseNumeral.JapaneseNumeral.FindKanjiNumbers(xCho[0].Value);
+        var kanjiNumbers = JapaneseNumeralNET.JapaneseNumeral.FindKanjiNumbers(xCho[0].Value);
         return kanjiNumbers.Count > 0;
     }
 
 
 
-
-
-
-
-
-
-
-
-    //private static Dictionary<string, string> cachedTownRegexes = new Dictionary<string, string>();
 
     public static async Task<List<(SingleTown, string)>> GetTownRegexPatterns(string pref, string city) //Task<string> GetTownRegexPatterns(string pref, string city)
     {
@@ -382,7 +352,7 @@ public static class CacheRegexes
                 !IsKanjiNumberFollowedByCho(originalTown))
             {
                 // エイリアスとして町なしのパターンを登録
-                //TODO オリジナルのTSのコードの結果と一致するか確認せよ
+                //TODO オリジナルのTypeScriptのコードの結果と一致するか確認せよ
                 towns.Add(new SingleTown
                 {//例：東京都江戸川区西小松川12-345　→　originalTown 西小松川町, town 西小松川
                     koaza = town.koaza,
@@ -393,12 +363,12 @@ public static class CacheRegexes
                 });
             }
         }
-        //ListにSortをしても安定ソートにならない。
-        //オリジナルのTypeScriptのコードでは、townsをSort(a,b)しても、同じtown.lengthなら元の順序が保持されるようだ（安定ソート）
-        //そのため、OrderByを利用する。https://stackoverflow.com/a/12402519/9924249
-        ComparerA comparer = new();
-        towns = towns.OrderBy(x => x, comparer).ToList();
         // 少ない文字数の地名に対してミスマッチしないように文字の長さ順にソート
+        //オリジナルのTypeScriptのコードでは、townsをSort(a,b)しても、同じtown.lengthなら元の順序が保持されるようだ（安定ソート）
+        //そのため、C#では、OrderByを利用する。https://stackoverflow.com/a/12402519/9924249
+        var comparer = new TownsComparer();
+        towns = towns.OrderBy(x => x, comparer).ToList();
+        // 次の方法は、安定ソートにならない。ListにSortをしても安定ソートにならないため。
         //towns.Sort((a, b) =>
         //  {
         //      var aLen = a.town.Length;
@@ -420,7 +390,7 @@ public static class CacheRegexes
             var output2 = Regex.Replace(output1, "大?字", "(大?字)?");
             //var output3 = Regex.Replace(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", match => (match.Value[0]).ToString());
             // 以下住所マスターの町丁目に含まれる数字を正規表現に変換する
-            var output4 = Regex.Replace(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", matchEvaluator);
+            var output4 = Regex.Replace(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", MatchEvaluator);
 
             //MatchCollection results = Regex.Matches(output2, "([壱一二三四五六七八九十]+)(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)");
             //var sb = new StringBuilder();
@@ -515,27 +485,20 @@ public static class CacheRegexes
         }
 
 
-
-
-
-
-
-
-
-
-
         //var patterns = string.Join(", ", towns.Select(town => town.town));
         cachedTownRegexes[$"{pref}-{city}"] = patterns;
         return patterns;
     }
 
 
-    public static string matchEvaluator(Match m)
+    public static string MatchEvaluator(Match m)
     {
         //int index = m.Index; // 発見した文字列の開始位置
         string value = m.Value; // 発見した文字列
         var patterns3 = new List<string>();
-        patterns3.Add(Regex.Replace(value, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
+        var r = new Regex("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)"); //globalではないので、1回のみ置換
+        patterns3.Add(r.Replace(value, "", 1));
+        //patterns3.Add(Regex.Replace(value, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", ""));
         // 漢数字
         if (Regex.IsMatch(value, "^壱"))
         {
@@ -549,7 +512,9 @@ public static class CacheRegexes
             (
                Utils.Kan2Num(match.Value.ToString())
             ));
-            var num2 = Regex.Replace(num1, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
+            var r2 = new Regex("(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)");
+            var num2 = r2.Replace(num1, "", 1);
+            //var num2 = Regex.Replace(num1, "(丁目?|番(町|丁)|条|軒|線|(の|ノ)町|地割|号)", "");
             patterns3.Add(num2); // 半角アラビア数字
         }
         string _pattern = $"({string.Join("|", patterns3)})((丁|町)目?|番(町|丁)|条|軒|線|の町?|地割|号|[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━])";
@@ -562,52 +527,6 @@ public static class CacheRegexes
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //private static List<string[]> cachedSameNamedPrefectureCityRegexPatterns;
-
     public static Dictionary<string, string> GetSameNamedPrefectureCityRegexPatterns(List<string> prefs, Dictionary<string, List<string>> prefList)
     {
         if (cachedSameNamedPrefectureCityRegexPatterns is not null && cachedSameNamedPrefectureCityRegexPatterns.Any())
@@ -617,7 +536,9 @@ public static class CacheRegexes
 
         List<string> _prefs = prefs.ConvertAll(pref =>
         {
-            return Regex.Replace(pref, "[都|道|府|県]$", "");
+            var r = new Regex("[都|道|府|県]$");
+            return r.Replace(pref, "", 1);
+            //return Regex.Replace(pref, "[都|道|府|県]$", "");
         });
 
         cachedSameNamedPrefectureCityRegexPatterns = new();
@@ -625,6 +546,7 @@ public static class CacheRegexes
         {
             foreach (var city in pref.Value)
             {
+                // 「福島県石川郡石川町」のように、市の名前が別の都道府県名から始まっているケースも考慮する。
                 for (int j = 0; j < _prefs.Count; j++)
                 {
                     if (city.IndexOf(_prefs[j]) == 0)
@@ -639,31 +561,8 @@ public static class CacheRegexes
     }
 }
 
-//public class TownList
-//{
-//    // Define your TownList class properties here
-//}
 
-
-//public class GaikuListItem
-//{
-//    // Define properties of GaikuListItem class
-//}
-
-public class Residential
-{
-    public string gaiku { get; set; }
-    public string jyukyo { get; set; }
-}
-
-//public class ResidentialList : List<Residential> { }
-
-//public class Config
-//{
-//    public int interfaceVersion { get; set; }
-//}
-
-public class ComparerA : IComparer<SingleTown>
+public class TownsComparer : IComparer<SingleTown>
 {
     public int Compare(SingleTown a, SingleTown b)
     {

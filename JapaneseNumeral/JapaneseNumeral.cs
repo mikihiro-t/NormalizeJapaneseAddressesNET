@@ -2,13 +2,11 @@
 global using System.Collections.Generic;
 global using System.Text;
 global using System.Text.RegularExpressions;
-using System.Diagnostics;
 
-namespace JapaneseNumeral;
+namespace JapaneseNumeralNET;
 
 public static class JapaneseNumeral
 {
-
     public static long Kanji2Number(string japanese)
     {
         japanese = Utils.Normalize(japanese);
@@ -64,7 +62,7 @@ public static class JapaneseNumeral
         {
             kanji = kanji + Utils.N2Kan(number);
         }
-        return kanji;
+        return string.IsNullOrEmpty(kanji) ? "〇" : kanji;
     }
 
 
@@ -162,7 +160,7 @@ public static class JapaneseNumeral
 
         if (matchesList.Count > 0)
         {
-            List<string> result = new List<string>();
+            List<string> result = new ();
             foreach (var item in matchesList)
             {
                 if ((!Regex.IsMatch(item, "^[0-9０-９]+$")) && (item.Length > 0 && item != "兆" && item != "億" && item != "万" && item != "萬"))

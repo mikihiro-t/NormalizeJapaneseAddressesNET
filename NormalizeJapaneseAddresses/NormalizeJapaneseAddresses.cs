@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Text;
+global using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NormalizeJapaneseAddresses.lib;
+using NormalizeJapaneseAddressesNET.Lib;
 
-namespace NormalizeJapaneseAddresses;
+namespace NormalizeJapaneseAddressesNET;
 
 public class TransformRequestResponse
 {
@@ -16,9 +16,9 @@ public class TransformRequestResponse
 public class TransformRequestQuery
 {
     public int level { get; set; } //  level = -1 は旧 API。 transformRequestFunction を設定しても無視する
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
 }
 
 public delegate TransformRequestResponse TransformRequestFunction(Uri url, TransformRequestQuery query);
@@ -27,25 +27,28 @@ public delegate TransformRequestResponse TransformRequestFunction(Uri url, Trans
 /// normalize {@link Normalizer} の動作オプション。
 /// </summary>
 public class Config
-{  /**
-   * レスポンス型のバージョン。デフォルト 1
-   * 1 の場合は jyukyo: string, gaiku: string
-   * 2 の場合は addr: string,　other: string
-   */
-    public int interfaceVersion { get; set; }
+{
+    /// <summary>
+    /// レスポンス型のバージョン。デフォルト 1
+    /// 1 の場合は jyukyo: string, gaiku: string
+    /// 2 の場合は addr: string,　other: string
+    /// </summary>
+    public int InterfaceVersion { get; set; }
     /// <summary>
     /// 住所データを URL 形式で指定。 file:// 形式で指定するとローカルファイルを参照できます。
+    /// ローカルファイルは現時点で利用できない。
     /// </summary>
-    public string japaneseAddressesApi { get; set; }
+    public string? JapaneseAddressesApi { get; set; }
     /// <summary>
     /// 町丁目のデータを何件までキャッシュするか。デフォルト 1,000
+    /// C#プログラムでは、利用しない。
     /// </summary>
-    public int townCacheSize { get; set; }
+    public int TownCacheSize { get; set; }
     /// <summary>
     /// 住所データへのリクエストを変形するオプション。 interfaceVersion === 2 で有効
     /// </summary>
-    public TransformRequestFunction transformRequest { get; set; }
-    public string geoloniaApiKey { get; set; }
+    public TransformRequestFunction? TransformRequest { get; set; }
+    public string? GeoloniaApiKey { get; set; }
 }
 
 public static class NormalizeClass
@@ -55,52 +58,54 @@ public static class NormalizeClass
 
 public class NormalizeResult_v1 : INormalizeResult
 {
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
-    public string gaiku { get; set; }
-    public string jyukyo { get; set; }
-    public string addr { get; set; }
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
+    public string? gaiku { get; set; }
+    public string? jyukyo { get; set; }
+    public string? addr { get; set; }
     public double? lat { get; set; }
     public double? lng { get; set; }
-    /**
- * 住所文字列をどこまで判別できたかを表す正規化レベル
- * - 0 - 都道府県も判別できなかった。
- * - 1 - 都道府県まで判別できた。
- * - 2 - 市区町村まで判別できた。
- * - 3 - 町丁目まで判別できた。
- * - 7 - 住居表示住所の街区までの判別ができた。
- * - 8 - 住居表示住所の街区符号・住居番号までの判別ができた。
- */
+
+    /// <summary>
+    /// 住所文字列をどこまで判別できたかを表す正規化レベル
+    // - 0 - 都道府県も判別できなかった。
+    // - 1 - 都道府県まで判別できた。
+    // - 2 - 市区町村まで判別できた。
+    // - 3 - 町丁目まで判別できた。
+    // - 7 - 住居表示住所の街区までの判別ができた。
+    // - 8 - 住居表示住所の街区符号・住居番号までの判別ができた。
+    /// </summary>
     public int level { get; set; }
 }
 
 public class NormalizeResult_v2 : INormalizeResult
 {
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
-    public string addr { get; set; }
-    public string other { get; set; }
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
+    public string? addr { get; set; }
+    public string? other { get; set; }
     public double? lat { get; set; }
     public double? lng { get; set; }
-    /**
- * 住所文字列をどこまで判別できたかを表す正規化レベル
- * - 0 - 都道府県も判別できなかった。
- * - 1 - 都道府県まで判別できた。
- * - 2 - 市区町村まで判別できた。
- * - 3 - 町丁目まで判別できた。
- * - 8 - 住居表示住所の街区符号・住居番号までの判別または地番住所の判別ができた。
- */
+
+    /// <summary>
+    ///  住所文字列をどこまで判別できたかを表す正規化レベル
+    // - 0 - 都道府県も判別できなかった。
+    // - 1 - 都道府県まで判別できた。
+    // - 2 - 市区町村まで判別できた。
+    // - 3 - 町丁目まで判別できた。
+    // - 8 - 住居表示住所の街区符号・住居番号までの判別または地番住所の判別ができた。
+    /// </summary>
     public int level { get; set; }
 }
 
 public interface INormalizeResult
 {
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
-    public string addr { get; set; }
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
+    public string? addr { get; set; }
     public double? lat { get; set; }
     public double? lng { get; set; }
     public int level { get; set; }
@@ -108,84 +113,75 @@ public interface INormalizeResult
 
 public class NormalizeResult : INormalizeResult
 {
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
-    public string addr { get; set; }
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
+    public string? addr { get; set; }
     public double? lat { get; set; }
     public double? lng { get; set; }
     public int level { get; set; }
 }
 
 /// <summary>
-/// normalizeTownNameで、atとlngをstringとして返すためのクラス。
+/// normalizeTownNameで、latとlngをstringとして返すためのクラス。
 /// </summary>
 public class NormalizeResultString
 {
-    public string pref { get; set; }
-    public string city { get; set; }
-    public string town { get; set; }
-    public string addr { get; set; }
-    public string lat { get; set; } //string
-    public string lng { get; set; }　//string
+    public string? pref { get; set; }
+    public string? city { get; set; }
+    public string? town { get; set; }
+    public string? addr { get; set; }
+    public string? lat { get; set; } //string
+    public string? lng { get; set; }　//string
     public int level { get; set; }
 }
 
-/**
- * 正規化関数の {@link normalize} のオプション
- */
-
-public interface Option
+/// <summary>
+/// 正規化関数の {@link normalize} のオプション
+/// </summary>
+public interface IOption
 {
     /// <summary>
     /// 正規化を行うレベルを指定します。{@link Option.level}
     /// </summary>
     /// <remarks>https://github.com/geolonia/normalize-japanese-addresses#normalizeaddress-string</remarks>
     int? level { get; set; }
-    /** 指定した場合、Geolonia のバックエンドを利用してより高精度の正規化を行います */
+    /// <summary>
+    /// 指定した場合、Geolonia のバックエンドを利用してより高精度の正規化を行います
+    /// </summary>
     string geoloniaApiKey { get; set; }
 }
 
-
-/**
- * 住所を正規化します。
- *
- * @param input - 住所文字列
- * @param option -  正規化のオプション {@link Option}
- *
- * @returns 正規化結果のオブジェクト {@link NormalizeResult}
- *
- * @see https://github.com/geolonia/normalize-japanese-addresses#normalizeaddress-string
- */
-public delegate Task<INormalizeResult> Normalizer(string input, Option option = null);
-
-public delegate Task<Response> FetchLike(string input, TransformRequestQuery requestQuery = null);
+/// <summary>
+/// オリジナルのTypeScriptにはないクラス。
+/// </summary>
+public class NormalizerOption : IOption
+{
+    public int? level { get; set; }
+    public string? geoloniaApiKey { get; set; }
+}
 
 
-public static class defaultOption
+public static class DefaultOption
 {
     public static int level = 3;
 }
 
-public class Response
-{
-    // Define properties of Response class here
-}
 
 /// <summary>
 /// @internal
 /// </summary>
-internal static class __internals
+internal static class Internals
 {
-    public static async Task<string> fetch(string input)
+    public static async Task<string> Fetch(string input)
     {
-        string url = new Uri(NormalizeClass.config.japaneseAddressesApi + input).ToString();
-        if (!string.IsNullOrEmpty(NormalizeClass.config.geoloniaApiKey))
+        string url = new Uri(NormalizeClass.config.JapaneseAddressesApi + input).ToString();
+        if (!string.IsNullOrEmpty(NormalizeClass.config.GeoloniaApiKey))
         {
-            url += $"?geolonia-api-key={NormalizeClass.config.geoloniaApiKey}";
+            url += $"?geolonia-api-key={NormalizeClass.config.GeoloniaApiKey}";
         }
-        //  return unfetch(url) に対応したC#のコード
-        using (HttpClient client = new HttpClient())
+        //  return unfetch(url) に準拠する処理。返値はstringになる。
+        using (var client = new HttpClient())
         {
             HttpResponseMessage response = await client.GetAsync(url);
             if (response.IsSuccessStatusCode)
@@ -203,12 +199,14 @@ internal static class __internals
 }
 
 
-public static class Program
+public static class NormalizeJapaneseAddresses
 {
     public static async Task<NormalizeResultString> NormalizeTownName(string addr, string pref, string city)
     {
         addr = addr.Trim();
-        addr = Regex.Replace(addr, "^大字", "");
+        var r = new Regex("^大字");
+        addr = r.Replace(addr, "", 1);
+        //addr = Regex.Replace(addr, "^大字", "");
 
         List<(SingleTown, string)> townPatterns = await CacheRegexes.GetTownRegexPatterns(pref, city);
         List<string> regexPrefixes = new List<string> { "^" };
@@ -240,8 +238,6 @@ public static class Program
 
         return null; //TODO nullで良いか確認せよ
     }
-
-
 
     public static async Task<NormalizeResult_v1> NormalizeResidentialPart(string addr, string pref, string city, string town)
     {
@@ -289,12 +285,26 @@ public static class Program
         return null;
     }
 
+    /// <summary>
+    /// 未実装
+    /// </summary>
+    /// <param name="pref"></param>
+    /// <param name="city"></param>
+    /// <param name="town"></param>
+    /// <returns></returns>
     public static async Task<List<Dictionary<string, string>>> GetGaikuList(string pref, string city, string town)
     {
         // implementation of getGaikuList function
         return new List<Dictionary<string, string>>();
     }
 
+    /// <summary>
+    /// 未実装
+    /// </summary>
+    /// <param name="pref"></param>
+    /// <param name="city"></param>
+    /// <param name="town"></param>
+    /// <returns></returns>
     public static async Task<List<Dictionary<string, string>>> GetResidentials(string pref, string city, string town)
     {
         // implementation of getResidentials function
@@ -302,52 +312,60 @@ public static class Program
     }
 
 
-
-
-
-
-    public static async Task<AddressResult> NormalizeAddrPart(string addr, string pref, string city, string town)
+    public static async Task<AddressResult?> NormalizeAddrPart(string addr, string pref, string city, string town)
     {
         List<SingleAddr> addrListItem = await CacheRegexes.GetAddrs(pref, city, town);
 
+        // 住居表示住所、および地番住所が見つからなかった
         if (addrListItem.Count == 0)
         {
             return null;
         }
 
-        SingleAddr addrItem = addrListItem.Find(item => addr.StartsWith(item.addr));
-
-        if (addrItem != null)
+        SingleAddr? addrItem = addrListItem.Find(item => addr.StartsWith(item.addr));
+        if (addrItem is not null)
         {
             string other = addr.Replace(addrItem.addr, "").Trim();
             return new AddressResult { addr = addrItem.addr, other = other, lat = addrItem.lat, lng = addrItem.lng };
         }
-
         return null;
     }
 
-
+    /// <summary>
+    /// 住所を正規化します。
+    /// </summary>
+    /// <param name="address">住所文字列</param>
+    /// <param name="option">正規化のオプション</param>
+    /// <returns>正規化結果のオブジェクト</returns>
+    /// <exception cref="Exception"></exception>
+    /// <remarks>https://github.com/geolonia/normalize-japanese-addresses#normalizeaddress-string</remarks>
     public static async Task<INormalizeResult> Normalize(string address, NormalizerOption? option = null)
     {
         if (option is null)
         {
             option = new NormalizerOption();
-            option.Level = defaultOption.level;
+            option.level = DefaultOption.level;
         }
 
-        if (!string.IsNullOrEmpty(option.GeoloniaApiKey) || !string.IsNullOrEmpty(NormalizeClass.config.geoloniaApiKey))
+        if (!string.IsNullOrEmpty(option.geoloniaApiKey) || !string.IsNullOrEmpty(NormalizeClass.config.GeoloniaApiKey))
         {
-            option.Level = 8;
-            if (!string.IsNullOrEmpty(option.GeoloniaApiKey))
+            option.level = 8;
+            if (!string.IsNullOrEmpty(option.geoloniaApiKey))
             {
-                NormalizeClass.config.geoloniaApiKey = option.GeoloniaApiKey;
+                NormalizeClass.config.GeoloniaApiKey = option.geoloniaApiKey;
             }
 
-            if (NormalizeClass.config.japaneseAddressesApi == Configs.gh_pages_endpoint)
+            if (NormalizeClass.config.JapaneseAddressesApi == Configs.gh_pages_endpoint)
             {
-                NormalizeClass.config.japaneseAddressesApi = "https://japanese-addresses.geolonia.com/next/ja";
+                NormalizeClass.config.JapaneseAddressesApi = "https://japanese-addresses.geolonia.com/next/ja";
             }
         }
+
+        // 入力された住所に対して以下の正規化を予め行う。
+        //
+        // 1. `1-2-3` や `四-五-六` のようなフォーマットのハイフンを半角に統一。
+        // 2. 町丁目以前にあるスペースをすべて削除。
+        // 3. 最初に出てくる `1-` や `五-` のような文字列を町丁目とみなして、それ以前のスペースをすべて削除する。
 
         var addr = address
             .Normalize(NormalizationForm.FormC)
@@ -363,18 +381,43 @@ public static class Program
         {
             return Regex.Replace(match.Value, "[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
         });
-        addr = Regex.Replace(addr, "(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)", (match) =>
-       {
-           return match.Value.Replace(" ", "");
-       });
-        addr = Regex.Replace(addr, "(.+)((郡.+(町|村))|((市|巿).+(区|區)))", (match) =>
+
+
+        var r1 = new Regex("(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)");
+        addr = r1.Replace(addr, (match) =>
         {
-            return match.Value.Replace(" ", "");
-        });
-        addr = Regex.Replace(addr, ".+?[0-9一二三四五六七八九〇十百千]-", (match) =>
+            return match.Value.Replace(" ", ""); // 町丁目名以前のスペースはすべて削除
+        }, 1);
+        // addr = Regex.Replace(addr, "(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)", (match) =>
+        //{
+        //    return match.Value.Replace(" ", "");
+        //});
+
+
+
+
+        var r2 = new Regex("(.+)((郡.+(町|村))|((市|巿).+(区|區)))");
+        addr = r2.Replace(addr, (match) =>
+        {
+            return match.Value.Replace(" ", ""); // 区、郡以前のスペースはすべて削除
+        }, 1);
+        //addr = Regex.Replace(addr, "(.+)((郡.+(町|村))|((市|巿).+(区|區)))", (match) =>
+        //{
+        //    return match.Value.Replace(" ", "");
+        //});
+
+
+
+        var r3 = new Regex(".+?[0-9一二三四五六七八九〇十百千]-"); //globalで一致されるので、replaceで、1回のみ（最初のみ）置換する。
+        addr = r3.Replace(addr, (match) =>
         {
             return match.Value.Replace(" ", ""); // 1番はじめに出てくるアラビア数字以前のスペースを削除
-        });
+        }, 1);
+        //次は、globalで正規表現が実行されるので、一致するのが全て置換される。
+        //addr = Regex.Replace(addr, ".+?[0-9一二三四五六七八九〇十百千]-", (match) =>
+        //{
+        //    return match.Value.Replace(" ", ""); // 1番はじめに出てくるアラビア数字以前のスペースを削除
+        //});
 
         string pref = "";
         string city = "";
@@ -383,6 +426,8 @@ public static class Program
         double? lng = null;
         int level = 0;
         NormalizeResultString? normalized = null;
+
+        // 都道府県名の正規化
 
         var prefectures = await CacheRegexes.GetPrefectures();
         var prefs = prefectures.Keys.ToList();
@@ -452,6 +497,7 @@ public static class Program
                     }
                 }
             }
+
             // マッチする都道府県が複数ある場合は町名まで正規化して都道府県名を判別する。（例: 東京都府中市と広島県府中市など）
             if (matched.Count == 1)
             {
@@ -470,7 +516,7 @@ public static class Program
             }
         }
 
-        if (!string.IsNullOrEmpty(pref) && option.Level >= 2)
+        if (!string.IsNullOrEmpty(pref) && option.level >= 2)
         {
             var cities = prefectures[pref];
             var cityPatterns = CacheRegexes.GetCityRegexPatterns(pref, cities);
@@ -483,12 +529,14 @@ public static class Program
                 if (match.Success)
                 {
                     city = _city;
-                    addr = addr.Substring(match.Value.Length);
+                    addr = addr.Substring(match.Value.Length); // 市区町村名以降の住所
                     break;
                 }
             }
         }
-        if (!string.IsNullOrEmpty(city) && option.Level >= 3)
+
+        // 町丁目以降の正規化
+        if (!string.IsNullOrEmpty(city) && option.level >= 3)
         {
             normalized = await NormalizeTownName(addr, pref, city);
             if (normalized is not null)
@@ -519,7 +567,7 @@ public static class Program
                         var m = Regex.Replace(match.Value, @"([0-9]+)",
                             (num) =>
                             {
-                                return JapaneseNumeral.JapaneseNumeral.Number2kanji(long.Parse(num.Value));
+                                return JapaneseNumeralNET.JapaneseNumeral.Number2kanji(long.Parse(num.Value));
                             });
                         return m;
                     });
@@ -538,7 +586,6 @@ public static class Program
                           m = Regex.Replace(m, @"[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]", "-");
                           return m;
                       });
-
 
                 addr = Regex.Replace(addr, @"[-－﹣−‐⁃‑‒–—﹘―⎯⏤ーｰ─━]([0-9]+|[〇一二三四五六七八九十百千]+)", (match) =>
                 {
@@ -578,9 +625,9 @@ public static class Program
         if (!string.IsNullOrEmpty(pref)) level++;
         if (!string.IsNullOrEmpty(city)) level++;
         if (!string.IsNullOrEmpty(town)) level++;
-        if (option.Level <= 3 || level < 3)
+        if (option.level <= 3 || level < 3)
         {
-            return new NormalizeResult() //NormalizeResult v1 v2に関わらず、この時点で返値を返すために、NormalizeResultのクラスを利用（JavaScriptにはない）
+            return new NormalizeResult() //NormalizeResult v1 v2に関わらず、この時点で返値を返すために、NormalizeResultのクラスを利用（TypeScriptにはない）
             {
                 pref = pref,
                 city = city,
@@ -591,7 +638,16 @@ public static class Program
                 lng = lng
             };
         }
-        if (Configs.CurrentConfig.interfaceVersion == 2)
+
+        // ======================== Advanced section ========================
+        // これ以下は地番住所または住居表示住所までの正規化・ジオコーディングを行う処理
+        // 現状、インターフェース v1 と v2 が存在する
+        // japanese-addresses のフォーマット、および normalize 関数の戻り値が異なる
+        // 将来的に v2 に統一することを検討中
+        // ==================================================================
+
+        // v2 のインターフェース
+        if (Configs.CurrentConfig.InterfaceVersion == 2)
         {
             var normalizedAddrPart = await NormalizeAddrPart(addr, pref, city, town);
             var other = "";
@@ -628,11 +684,11 @@ public static class Program
             }
             return result;
         }
-        else if (Configs.CurrentConfig.interfaceVersion == 1)
+        else if (Configs.CurrentConfig.InterfaceVersion == 1)
         {
+            // 住居表示住所リストを使い番地号までの正規化を行う
             var normalizeResult_v1 = new NormalizeResult_v1();
-
-            if (option.Level > 3 && normalized is not null && town is not null)
+            if (option.level > 3 && normalized is not null && town is not null)
             {
                 normalizeResult_v1 = await NormalizeResidentialPart(addr, pref, city, town);
             }
@@ -644,7 +700,7 @@ public static class Program
             //}
             if ((lat is double and not double.NaN) && (lng is double and not double.NaN))
             {
-                //latはlngは、nullでもなければ非数でもない
+                //latとlngは、nullでもなければ非数でもない
             }
             else
             {
@@ -690,14 +746,9 @@ public static class Program
 
 public class AddressResult
 {
-    public string addr { get; set; }
-    public string other { get; set; }
-    public string lat { get; set; }
-    public string lng { get; set; }
-}
-public class NormalizerOption
-{
-    public string GeoloniaApiKey { get; set; }
-    public int Level { get; set; }
+    public string? addr { get; set; }
+    public string? other { get; set; }
+    public string? lat { get; set; }
+    public string? lng { get; set; }
 }
 

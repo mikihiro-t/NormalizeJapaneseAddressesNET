@@ -1,8 +1,4 @@
-﻿using Xunit;
-using JapaneseNumeral;
-using static System.Net.Mime.MediaTypeNames;
-
-namespace JapaneseNumeral.Tests;
+﻿namespace JapaneseNumeralNET.Tests;
 
 public class JapaneseNumeralTest
 {
@@ -49,7 +45,7 @@ public class JapaneseNumeralTest
     }
 
     [Theory]
-    [InlineData(0, "")]
+    [InlineData(0, "〇")]
     [InlineData(1110, "千百十")]
     [InlineData(1111111111111111, "千百十一兆千百十一億千百十一万千百十一")]
     [InlineData(1111113111111111, "千百十一兆千百三十一億千百十一万千百十一")]

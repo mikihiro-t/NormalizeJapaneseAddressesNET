@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
-namespace NormalizeJapaneseAddresses.lib;
+﻿namespace NormalizeJapaneseAddressesNET.Lib;
 
 public static class AddressUtils
 {
@@ -53,7 +46,9 @@ public static class AddressUtils
         {
             if (patch.Pref == pref && patch.City == city && patch.Town == town)
             {
-                _addr = Regex.Replace(_addr, patch.Pattern, patch.Result);
+                var r = new Regex(patch.Pattern);
+                _addr = r.Replace(_addr, patch.Result, 1); //AddrPatchの、Patternがglobalでないのを前提としている
+                //_addr = Regex.Replace(_addr, patch.Pattern, patch.Result);
             }
         }
         return _addr;

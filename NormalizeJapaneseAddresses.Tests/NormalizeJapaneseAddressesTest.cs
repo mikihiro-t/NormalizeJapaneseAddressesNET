@@ -1,5 +1,7 @@
-﻿namespace NormalizeJapaneseAddresses.Tests;
-public class NormalizeClassTest
+﻿using NormalizeJapaneseAddressesNET;
+
+namespace NormalizeJapaneseAddressesNET.Tests;
+public class NormalizeJapaneseAddressesTest
 {
     [Theory]
     [InlineData("大阪府堺市北区新金岡町4丁1−8", "大阪府", "堺市北区", "新金岡町四丁", "1-8", 34.568184, 135.519409, 3)]
@@ -212,7 +214,7 @@ public class NormalizeClassTest
     [InlineData("広島県府中市栗柄町名字八五十2459", "広島県", "府中市", "栗柄町", "名字八五十2459", 34.542852, 133.23166, 3)]
     public async void NormalizeMainTest(string text, string pref, string city, string town, string addr, double? lat, double? lng, int level)
     {
-        var result = await NormalizeJapaneseAddresses.Program.Normalize(text);
+        var result = await NormalizeJapaneseAddresses.Normalize(text);
 
         Assert.Equal(pref, result.pref);
         Assert.Equal(city, result.city);
@@ -229,8 +231,8 @@ public class NormalizeClassTest
     [InlineData("神奈川県横浜市港北区大豆戸町１７番地１１", 3, "神奈川県", "横浜市港北区", "大豆戸町", "17-11", 35.513492, 139.625651, 3)]
     public async void NormalizeMainLevelOptionTest(string text, int levelOption, string pref, string city, string town, string addr, double? lat, double? lng, int level)
     {
-        var option = new NormalizerOption() { Level = levelOption };
-        var result = await NormalizeJapaneseAddresses.Program.Normalize(text, option);
+        var option = new NormalizerOption() { level = levelOption };
+        var result = await NormalizeJapaneseAddresses.Normalize(text, option);
 
         Assert.Equal(pref, result.pref);
         Assert.Equal(city, result.city);
@@ -281,7 +283,7 @@ public class NormalizeClassTest
 
     public async void NormalizeMainOtherTest(string text, string city, string notCity, string town, string notTown, string addr, int? level)
     {
-        var result = await NormalizeJapaneseAddresses.Program.Normalize(text);
+        var result = await NormalizeJapaneseAddresses.Normalize(text);
         if (city is not null) Assert.Equal(city, result.city);
         if (notCity is not null) Assert.NotEqual(notCity, result.city);
         if (town is not null) Assert.Equal(town, result.town);
@@ -294,7 +296,7 @@ public class NormalizeClassTest
     [InlineData("大分県大分市田中町3丁目1-12", null, null)]
     public async void NormalizeMainLatLngTest(string text, double? lat, double? lng)
     {
-        var result = await NormalizeJapaneseAddresses.Program.Normalize(text);
+        var result = await NormalizeJapaneseAddresses.Normalize(text);
         Assert.Equal(lat, result.lat);
         Assert.Equal(lng, result.lng);
     }
@@ -7564,7 +7566,7 @@ public class NormalizeClassTest
     [InlineData("福岡県飯塚市枝国４６４－８", "福岡県", "飯塚市", "枝国", "464-8")]
     public async void NormalizeTest(string text, string pref, string city, string town, string addr)
     {
-        var result = await NormalizeJapaneseAddresses.Program.Normalize(text);
+        var result = await NormalizeJapaneseAddresses.Normalize(text);
 
         Assert.Equal(pref, result.pref);
         Assert.Equal(city, result.city);

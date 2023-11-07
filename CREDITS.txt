@@ -1,0 +1,5 @@
+Credits
+
+normalize-japanese-addresses is Copyright (c) 2020 Geolonia Inc.
+
+japanese-numeral is Copyright (c) 2020 Geolonia Inc.

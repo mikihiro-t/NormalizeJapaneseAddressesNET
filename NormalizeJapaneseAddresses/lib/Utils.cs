@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JapaneseNumeral;
+﻿using JapaneseNumeralNET;
 
-namespace NormalizeJapaneseAddresses.lib;
+namespace NormalizeJapaneseAddressesNET.Lib;
 
 public static class Utils
 {
@@ -19,12 +14,12 @@ public static class Utils
 
     public static string Kan2Num(string input)
     {
-        var kanjiNumbers = JapaneseNumeral.JapaneseNumeral.FindKanjiNumbers(input);
+        var kanjiNumbers = JapaneseNumeralNET.JapaneseNumeral.FindKanjiNumbers(input);
         for (int i = 0; i < kanjiNumbers.Count; i++)
         {
             try
             {
-                input = input.Replace(kanjiNumbers[i], JapaneseNumeral.JapaneseNumeral.Kanji2Number(kanjiNumbers[i]).ToString());  //TODO longをToStringに変換でよいか？
+                input = input.Replace(kanjiNumbers[i], JapaneseNumeralNET.JapaneseNumeral.Kanji2Number(kanjiNumbers[i]).ToString());  //TODO longをToStringに変換でよいか？
             }
             catch (Exception)
             {
