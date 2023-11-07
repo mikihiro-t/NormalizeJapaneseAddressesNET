@@ -3,15 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NormalizeJapaneseAddressesNET", "NormalizeJapaneseAddresses\NormalizeJapaneseAddressesNET.csproj", "{4E401B22-4029-4D63-B245-DCED83E45C71}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NormalizeJapaneseAddressesNET", "NormalizeJapaneseAddressesNET\NormalizeJapaneseAddressesNET.csproj", "{4E401B22-4029-4D63-B245-DCED83E45C71}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JapaneseNumeralNET", "JapaneseNumeral\JapaneseNumeralNET.csproj", "{94643C99-F2D8-4160-87BF-F5782E6D1384}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JapaneseNumeralNET", "JapaneseNumeralNET\JapaneseNumeralNET.csproj", "{94643C99-F2D8-4160-87BF-F5782E6D1384}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JapaneseNumeralNET.Tests", "JapaneseNumeral.Tests\JapaneseNumeralNET.Tests.csproj", "{6C48D9AE-1274-4B70-B0E8-56A8F6CBD130}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JapaneseNumeralNET.Tests", "JapaneseNumeralNET.Tests\JapaneseNumeralNET.Tests.csproj", "{6C48D9AE-1274-4B70-B0E8-56A8F6CBD130}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{E84AB86A-DFDE-442B-AB11-F34D724FDE73}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NormalizeJapaneseAddressesNET.Tests", "NormalizeJapaneseAddresses.Tests\NormalizeJapaneseAddressesNET.Tests.csproj", "{88F56804-0F0C-4476-9DD0-1B62EE6E67B7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NormalizeJapaneseAddressesNET.Tests", "NormalizeJapaneseAddressesNET.Tests\NormalizeJapaneseAddressesNET.Tests.csproj", "{88F56804-0F0C-4476-9DD0-1B62EE6E67B7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NormalizeDemo", "NormalizeDemo\NormalizeDemo.csproj", "{674B45EA-CD19-43BB-989C-C1635BC18D83}"
 EndProject
@@ -40,10 +38,6 @@ Global
 		{6C48D9AE-1274-4B70-B0E8-56A8F6CBD130}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6C48D9AE-1274-4B70-B0E8-56A8F6CBD130}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6C48D9AE-1274-4B70-B0E8-56A8F6CBD130}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E84AB86A-DFDE-442B-AB11-F34D724FDE73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E84AB86A-DFDE-442B-AB11-F34D724FDE73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E84AB86A-DFDE-442B-AB11-F34D724FDE73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E84AB86A-DFDE-442B-AB11-F34D724FDE73}.Release|Any CPU.Build.0 = Release|Any CPU
 		{88F56804-0F0C-4476-9DD0-1B62EE6E67B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{88F56804-0F0C-4476-9DD0-1B62EE6E67B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88F56804-0F0C-4476-9DD0-1B62EE6E67B7}.Release|Any CPU.ActiveCfg = Release|Any CPU

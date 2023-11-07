@@ -32,7 +32,6 @@ public static class JapaneseNumeral
                 }
             }
             if (!long.TryParse(numbers["千"].ToString(), out long temp))
-            //if (!Number.IsInteger(number) || !Number.IsInteger(numbers["千"]))
             {
                 throw new Exception("The attribute of kanji2number() must be a Japanese numeral as integer.");
             }
@@ -99,7 +98,7 @@ public static class JapaneseNumeral
             {
                 if (Regex.IsMatch(t, level1String[j]))
                 {
-                    //level1Index = j; //兆、億などの文字があった場合
+                    //level1Index = j; //兆、億、万、萬の文字があった場合
                     matchTemp.Append(t);
                     isLevel1 = true;
                     break;
@@ -112,7 +111,7 @@ public static class JapaneseNumeral
             {
                 if (Regex.IsMatch(t, level2String[j]))
                 {
-                    //level2Index = j; //兆、億などの文字があった場合
+                    //level2Index = j; //千、阡、仟、百、陌、佰、十、拾などの文字があった場合
                     matchTemp.Append(t);
                     isLevel2 = true;
                     break;
@@ -160,7 +159,7 @@ public static class JapaneseNumeral
 
         if (matchesList.Count > 0)
         {
-            List<string> result = new ();
+            List<string> result = new();
             foreach (var item in matchesList)
             {
                 if ((!Regex.IsMatch(item, "^[0-9０-９]+$")) && (item.Length > 0 && item != "兆" && item != "億" && item != "万" && item != "萬"))

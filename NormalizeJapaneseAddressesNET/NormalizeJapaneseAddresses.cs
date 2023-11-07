@@ -46,6 +46,7 @@ public class Config
     public int TownCacheSize { get; set; }
     /// <summary>
     /// 住所データへのリクエストを変形するオプション。 interfaceVersion === 2 で有効
+    /// C#プログラムでは、利用しない。
     /// </summary>
     public TransformRequestFunction? TransformRequest { get; set; }
     public string? GeoloniaApiKey { get; set; }
@@ -111,6 +112,10 @@ public interface INormalizeResult
     public int level { get; set; }
 }
 
+/// <summary>
+/// 正規化された住所のオブジェクトを返すためのクラス。
+/// TypeScriptのオリジナルにはない。
+/// </summary>
 public class NormalizeResult : INormalizeResult
 {
     public string? pref { get; set; }
@@ -134,6 +139,18 @@ public class NormalizeResultString
     public string? lat { get; set; } //string
     public string? lng { get; set; }　//string
     public int level { get; set; }
+}
+
+/// <summary>
+/// NormalizeAddrPartの、返値のためのクラス。
+/// TypeScriptのオリジナルにはない。
+/// </summary>
+public class AddressResult
+{
+    public string? addr { get; set; }
+    public string? other { get; set; }
+    public string? lat { get; set; }
+    public string? lng { get; set; }
 }
 
 /// <summary>
@@ -161,7 +178,6 @@ public class NormalizerOption : IOption
     public string? geoloniaApiKey { get; set; }
 }
 
-
 public static class DefaultOption
 {
     public static int level = 3;
@@ -187,8 +203,6 @@ internal static class Internals
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsStringAsync();
-                //return new Response { await response.Content.ReadAsAsync<object>() };
-                //return new Response { json = async () => await response.Content.ReadAsAsync<object>() };
             }
             else
             {
@@ -198,15 +212,13 @@ internal static class Internals
     }
 }
 
-
 public static class NormalizeJapaneseAddresses
 {
-    public static async Task<NormalizeResultString> NormalizeTownName(string addr, string pref, string city)
+    public static async Task<NormalizeResultString?> NormalizeTownName(string addr, string pref, string city)
     {
         addr = addr.Trim();
         var r = new Regex("^大字");
         addr = r.Replace(addr, "", 1);
-        //addr = Regex.Replace(addr, "^大字", "");
 
         List<(SingleTown, string)> townPatterns = await CacheRegexes.GetTownRegexPatterns(pref, city);
         List<string> regexPrefixes = new List<string> { "^" };
@@ -236,7 +248,7 @@ public static class NormalizeJapaneseAddresses
             }
         }
 
-        return null; //TODO nullで良いか確認せよ
+        return null;
     }
 
     public static async Task<NormalizeResult_v1> NormalizeResidentialPart(string addr, string pref, string city, string town)
@@ -388,25 +400,12 @@ public static class NormalizeJapaneseAddresses
         {
             return match.Value.Replace(" ", ""); // 町丁目名以前のスペースはすべて削除
         }, 1);
-        // addr = Regex.Replace(addr, "(.+)(丁目?|番(町|地|丁)|条|軒|線|(の|ノ)町|地割)", (match) =>
-        //{
-        //    return match.Value.Replace(" ", "");
-        //});
-
-
-
 
         var r2 = new Regex("(.+)((郡.+(町|村))|((市|巿).+(区|區)))");
         addr = r2.Replace(addr, (match) =>
         {
             return match.Value.Replace(" ", ""); // 区、郡以前のスペースはすべて削除
         }, 1);
-        //addr = Regex.Replace(addr, "(.+)((郡.+(町|村))|((市|巿).+(区|區)))", (match) =>
-        //{
-        //    return match.Value.Replace(" ", "");
-        //});
-
-
 
         var r3 = new Regex(".+?[0-9一二三四五六七八九〇十百千]-"); //globalで一致されるので、replaceで、1回のみ（最初のみ）置換する。
         addr = r3.Replace(addr, (match) =>
@@ -433,17 +432,6 @@ public static class NormalizeJapaneseAddresses
         var prefs = prefectures.Keys.ToList();
         var prefPatterns = CacheRegexes.GetPrefectureRegexPatterns(prefs);
         var sameNamedPrefectureCityRegexPatterns = CacheRegexes.GetSameNamedPrefectureCityRegexPatterns(prefs, prefectures);
-
-
-
-
-
-
-
-
-
-
-
 
         // 県名が省略されており、かつ市の名前がどこかの都道府県名と同じ場合(例.千葉県千葉市)、
         // あらかじめ県名を補完しておく。
@@ -508,7 +496,7 @@ public static class NormalizeJapaneseAddresses
                 for (int i = 0; i < matched.Count; i++)
                 {
                     var normalized2 = await NormalizeTownName(matched[i].addr, matched[i].pref, matched[i].city);
-                    if (normalized2 != null)
+                    if (normalized2 is not null)
                     {
                         pref = matched[i].pref;
                     }
@@ -708,8 +696,7 @@ public static class NormalizeJapaneseAddresses
                 lng = null;
             }
 
-
-            NormalizeResult_v1 result = new NormalizeResult_v1
+            var result = new NormalizeResult_v1
             {
                 pref = pref,
                 city = city,
@@ -734,7 +721,6 @@ public static class NormalizeJapaneseAddresses
             //}
 
             return result;
-
         }
         else
         {
@@ -742,13 +728,3 @@ public static class NormalizeJapaneseAddresses
         }
     }
 }
-
-
-public class AddressResult
-{
-    public string? addr { get; set; }
-    public string? other { get; set; }
-    public string? lat { get; set; }
-    public string? lng { get; set; }
-}
-

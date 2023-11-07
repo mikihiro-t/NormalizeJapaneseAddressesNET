@@ -4,11 +4,13 @@ public static class AddressUtils
 {
     private class AddrPatch
     {
+#pragma warning disable CS8618
         public string Pref { get; set; }
         public string City { get; set; }
         public string Town { get; set; }
         public string Pattern { get; set; }
         public string Result { get; set; }
+#pragma warning restore CS8618
     }
 
     private static readonly List<AddrPatch> addrPatches = new()
@@ -48,7 +50,6 @@ public static class AddressUtils
             {
                 var r = new Regex(patch.Pattern);
                 _addr = r.Replace(_addr, patch.Result, 1); //AddrPatchの、Patternがglobalでないのを前提としている
-                //_addr = Regex.Replace(_addr, patch.Pattern, patch.Result);
             }
         }
         return _addr;

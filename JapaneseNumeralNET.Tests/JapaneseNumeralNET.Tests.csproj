@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JapaneseNumeral\JapaneseNumeralNET.csproj" />
+    <ProjectReference Include="..\JapaneseNumeralNET\JapaneseNumeralNET.csproj" />
   </ItemGroup>
 
 </Project>

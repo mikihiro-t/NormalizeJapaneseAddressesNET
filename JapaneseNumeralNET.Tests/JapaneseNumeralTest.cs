@@ -41,7 +41,6 @@ public class JapaneseNumeralTest
     {
         var result = JapaneseNumeral.Kanji2Number(kanji);
         Assert.Equal(number, result);
-
     }
 
     [Theory]
@@ -67,11 +66,15 @@ public class JapaneseNumeralTest
         Action act = () => JapaneseNumeral.Number2kanji(number);
         var ex = Record.Exception(act);
         Assert.NotNull(ex);
-        //Assert.IsType<InvalidOperationException>(ex);
     }
 
-
-    //3個までの漢数字のテストを行う。
+    /// <summary>
+    /// 3個までの漢数字のテストを行う。
+    /// </summary>
+    /// <param name="text"></param>
+    /// <param name="result1"></param>
+    /// <param name="result2"></param>
+    /// <param name="result3"></param>
     [Theory]
     [InlineData("今日は二千二十年十一月二十日です。", "二千二十", "十一", "二十")]
     [InlineData("今日は二〇二〇年十一月二十日です。", "二〇二〇", "十一", "二十")]
@@ -123,11 +126,3 @@ public class JapaneseNumeralTest
         Assert.Equal(number, result);
     }
 }
-
-
-//JavaScript
-//https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Number
-//const biggestInt = Number.MAX_SAFE_INTEGER; // (2**53 - 1) => 9007199254740991
-//const smallestInt = Number.MIN_SAFE_INTEGER; // -(2**53 - 1) => -9007199254740991
-
-//移植においては、numberの型を、longとして処理した。
