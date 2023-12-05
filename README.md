@@ -11,8 +11,11 @@
 - キャッシュする市区町村の数は設定しても反映しない。キャッシュは、アプリを終了するまで残る。
 - クラス名などの命名規則は.NET推奨のものに変更。
 
-### 実装予定の機能
-- 町丁目データ（`https://geolonia.github.io/japanese-addresses/api/ja`）をローカルファイルとして読み込めません。→対応予定
+### 町丁目データを、ローカルファイルで利用
+- 町丁目データ（`https://geolonia.github.io/japanese-addresses/api/ja`）をローカルファイルとして読み込めます。
+- `https://github.com/geolonia/japanese-addresses/archive/refs/heads/master.tar.gz`を解凍してできるjaフォルダを指定して下さい。  
+例  
+`NormalizeJapaneseAddresses.config.JapaneseAddressesApi = @"file://C:\HOGE\normalize-japanese-addresses\api\ja"`
 
 ### 留意点
 - awaitの非同期処理は対応できていないようです（確認しきれず）。
@@ -24,6 +27,9 @@
 - .NET 6
 
 # History
+- 2023-12-05 Ver 2.10
+	- 町丁目データ（api/ja）をローカルファイルとして読み込む機能を追加。
+	- Config関連のコードをリファクタリング。
 - 2023-11-07 Ver 2.10 β
 
 # Maintenance

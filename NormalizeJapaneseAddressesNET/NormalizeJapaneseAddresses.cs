@@ -36,7 +36,6 @@ public class Config
     public int InterfaceVersion { get; set; }
     /// <summary>
     /// 住所データを URL 形式で指定。 file:// 形式で指定するとローカルファイルを参照できます。
-    /// ローカルファイルは現時点で利用できない。
     /// </summary>
     public string? JapaneseAddressesApi { get; set; }
     /// <summary>
@@ -52,9 +51,17 @@ public class Config
     public string? GeoloniaApiKey { get; set; }
 }
 
-public static class NormalizeClass
+public static partial class NormalizeJapaneseAddresses
 {
-    public static Config config = Configs.CurrentConfig;
+    /// <summary>
+    /// staticのため、アプリ全体のconfigになる。
+    /// </summary>
+    /// <remarks>
+    /// <para>TypeScriptでは、export const config: Config = currentConfigとあり、configと、currentConfigとは同じインスタンスである。</para>
+    /// <para>従って、NormalizeJapaneseAddresses.configと、Configs.CurrentConfigとを同じインスタンスにした。</para>
+    /// <para>NormalizeJapaneseAddresses.configを利用しているコードもあるが、Configs.CurrentConfigに統一するのが分かりやすいかもしれない。しかし、オリジナルに準拠することにした。</para>
+    /// </remarks>
+    public static Config config { get; } = Configs.CurrentConfig;
 }
 
 public class NormalizeResult_v1 : INormalizeResult
@@ -191,28 +198,34 @@ internal static class Internals
 {
     public static async Task<string> Fetch(string input)
     {
-        string url = new Uri(NormalizeClass.config.JapaneseAddressesApi + input).ToString();
-        if (!string.IsNullOrEmpty(NormalizeClass.config.GeoloniaApiKey))
-        {
-            url += $"?geolonia-api-key={NormalizeClass.config.GeoloniaApiKey}";
-        }
-        //  return unfetch(url) に準拠する処理。返値はstringになる。
-        using (var client = new HttpClient())
-        {
-            HttpResponseMessage response = await client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                return await response.Content.ReadAsStringAsync();
-            }
-            else
-            {
-                throw new Exception($"Request failed with status code {response.StatusCode}");
-            }
-        }
+        //常に、main-nodeを利用して、httpかfileから読み取ることにした。
+        //TypeScriptでは、main-nodeをimportすると、Normalize.__internals.fetch = fetchOrReadFileとされ、fetchが、fetchOrReadFileに置き換わるようだ。
+        //C#では、overrideか、delegateを使うと似たような実装ができると考えるが、そこまで複雑にする必要も無いだろうと判断した。
+        return await MainNode.FetchOrReadFile(input);
+        //
+        // default fetch
+        //string url = new Uri(NormalizeClass.config.JapaneseAddressesApi + input).ToString();
+        //if (!string.IsNullOrEmpty(NormalizeClass.config.GeoloniaApiKey))
+        //{
+        //    url += $"?geolonia-api-key={NormalizeClass.config.GeoloniaApiKey}";
+        //}
+        ////  return unfetch(url) に準拠する処理。返値はstringになる。
+        //using (var client = new HttpClient())
+        //{
+        //    HttpResponseMessage response = await client.GetAsync(url);
+        //    if (response.IsSuccessStatusCode)
+        //    {
+        //        return await response.Content.ReadAsStringAsync();
+        //    }
+        //    else
+        //    {
+        //        throw new Exception($"Request failed with status code {response.StatusCode}");
+        //    }
+        //}
     }
 }
 
-public static class NormalizeJapaneseAddresses
+public static partial class NormalizeJapaneseAddresses
 {
     public static async Task<NormalizeResultString?> NormalizeTownName(string addr, string pref, string city)
     {
@@ -359,17 +372,18 @@ public static class NormalizeJapaneseAddresses
             option.level = DefaultOption.level;
         }
 
-        if (!string.IsNullOrEmpty(option.geoloniaApiKey) || !string.IsNullOrEmpty(NormalizeClass.config.GeoloniaApiKey))
+        if (!string.IsNullOrEmpty(option.geoloniaApiKey) || !string.IsNullOrEmpty(config.GeoloniaApiKey))
         {
             option.level = 8;
             if (!string.IsNullOrEmpty(option.geoloniaApiKey))
             {
-                NormalizeClass.config.GeoloniaApiKey = option.geoloniaApiKey;
+                config.GeoloniaApiKey = option.geoloniaApiKey;
             }
-
-            if (NormalizeClass.config.JapaneseAddressesApi == Configs.gh_pages_endpoint)
+            // API キーがある場合は、 Geolonia SaaS に切り替え。
+            // ただし、config を書き換えて別のエンドポイントを使うようにカスタマイズしているケースがあるので、その場合は config に既に入っている値を優先
+            if (config.JapaneseAddressesApi == Configs.gh_pages_endpoint)
             {
-                NormalizeClass.config.JapaneseAddressesApi = "https://japanese-addresses.geolonia.com/next/ja";
+                config.JapaneseAddressesApi = "https://japanese-addresses.geolonia.com/next/ja";
             }
         }
 

@@ -1,5 +1,8 @@
 ﻿global using NormalizeJapaneseAddressesNET;
 
+//ローカルファイルを指定する場合。「//」が無くても良いようだ。
+//NormalizeJapaneseAddresses.config.JapaneseAddressesApi = @"file://C:\HOGE\normalize-japanese-addresses\api\ja";
+
 var option = new NormalizerOption() { level = 1 };
 WriteLog(await NormalizeJapaneseAddresses.Normalize("福井県あわら市市姫3-1-1", option));
 

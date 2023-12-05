@@ -281,7 +281,7 @@ public class NormalizeJapaneseAddressesTest
     [InlineData("愛知県豊田市西丹波町三五十", null, null, "西丹波町", null, "三五十", 3)]
     [InlineData("広島県府中市栗柄町名字八五十2459", null, null, "栗柄町", null, "名字八五十2459", 3)]
 
-    public async void NormalizeMainOtherTest(string text, string city, string notCity, string town, string notTown, string addr, int? level)
+    public async void NormalizeMainOtherTest(string text, string? city, string? notCity, string? town, string? notTown, string? addr, int? level)
     {
         var result = await NormalizeJapaneseAddresses.Normalize(text);
         if (city is not null) Assert.Equal(city, result.city);

@@ -1,11 +1,13 @@
 ﻿namespace NormalizeJapaneseAddressesNET;
-
 public static class Configs
 {
     public readonly static string gh_pages_endpoint = "https://geolonia.github.io/japanese-addresses/api/ja";
-    public static Config CurrentConfig { get; set; } = new()
+    /// <summary>
+    /// TypeScriptのconstとは機能が異なるが、readonlyとした。ただし、InterfaceVersionなどのPropertyはreadonlyではない。
+    /// </summary>
+    public readonly static Config CurrentConfig = new()
     {
-        InterfaceVersion = 2,
+        InterfaceVersion = 1,
         JapaneseAddressesApi = gh_pages_endpoint,
         TownCacheSize = 1000,
     };
